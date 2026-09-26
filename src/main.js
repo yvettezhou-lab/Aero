@@ -3,13 +3,13 @@ import './style.css';
 const AIRPORTS = [
   ['KMG','昆明长水','Kunming'],['PEK','北京首都','Beijing'],['PKX','北京大兴','Beijing'],
   ['PVG','上海浦东','Shanghai'],['SHA','上海虹桥','Shanghai'],['CAN','广州白云','Guangzhou'],
-  ['SZX','深圳宝安','Shenzhen'],['CTU','成都天府','Chengdu'],['TFU','成都天府','Chengdu'],
+  ['SZX','深圳宝安','Shenzhen'],['TFU','成都天府','Chengdu'],
   ['HKG','香港','Hong Kong'],['SIN','新加坡樟宜','Singapore'],['BKK','曼谷素万那普','Bangkok'],
   ['KUL','吉隆坡','Kuala Lumpur'],['NRT','东京成田','Tokyo'],['HND','东京羽田','Tokyo'],
   ['ICN','首尔仁川','Seoul'],['TPE','台北桃园','Taipei'],['MNL','马尼拉','Manila']
 ];
 
-const WIDEBODY = /^(A3[0-9]{2}|A340|A350|A380|B747|B767|B77[0-9]|B78[0-9]|DC10|MD11|IL96|L1011)/i;
+const WIDEBODY = /\b(A300|A310|A330|A340|A350|A380|B747|B767|B77[0-9]|B78[0-9]|DC10|MD11|IL96|L1011)\b/i;
 
 const state = {
   airport: localStorage.getItem('aero-airport') || 'KMG',
@@ -18,6 +18,8 @@ const state = {
   widebody: false,
   airline: 'all',
   q: '',
+  timeFrom: '00:00',
+  timeTo: '23:59',
   flights: [],
   loading: false,
   error: ''
@@ -49,9 +51,11 @@ function render(){
   const airlines=[...new Set(state.flights.map(airlineOf).filter(x=>x!=='未知航司'))].sort();
   const filtered=state.flights.filter(f=>{
     const type=aircraft(f), airline=airlineOf(f), n=numberOf(f);
+    const t=timeOf(f);
     return (!state.widebody || isWide(type))
       && (state.airline==='all' || airline===state.airline)
-      && (!state.q || (n+' '+airline+' '+type).toLowerCase().includes(state.q.toLowerCase()));
+      && (!state.q || (n+' '+airline+' '+type).toLowerCase().includes(state.q.toLowerCase()))
+      && t >= state.timeFrom && t <= state.timeTo;
   });
   const dep=filtered.filter(f=>f.__direction==='dep'), arr=filtered.filter(f=>f.__direction==='arr');
   app.innerHTML=`
@@ -71,6 +75,10 @@ function render(){
       <div class="row">
         <label class="field grow"><span>航司</span><select id="airline"><option value="all">全部航司</option>${airlines.map(a=>`<option value="${esc(a)}" ${a===state.airline?'selected':''}>${esc(a)}</option>`).join('')}</select></label>
         <label class="field grow"><span>搜索</span><input id="q" placeholder="航班号 / 机型" value="${esc(state.q)}"></label>
+      </div>
+      <div class="row time-row">
+        <label class="field grow"><span>最早</span><input id="timeFrom" type="time" value="${state.timeFrom}"></label>
+        <label class="field grow"><span>最晚</span><input id="timeTo" type="time" value="${state.timeTo}"></label>
       </div>
     </section>
     <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
@@ -99,6 +107,8 @@ function bind(){
   document.querySelector('#date').onchange=e=>{state.date=e.target.value;load();};
   document.querySelector('#airline').onchange=e=>{state.airline=e.target.value;render();};
   document.querySelector('#q').oninput=e=>{state.q=e.target.value;render();};
+  document.querySelector('#timeFrom').onchange=e=>{state.timeFrom=e.target.value;render();};
+  document.querySelector('#timeTo').onchange=e=>{state.timeTo=e.target.value;render();};
   document.querySelector('#wide').onclick=()=>{state.widebody=!state.widebody;render();};
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
   document.querySelector('#refresh').onclick=load;
