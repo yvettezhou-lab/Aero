@@ -34,3 +34,5 @@
 @media(max-width:380px){.chips{gap:4px}.chips>.chip{padding-left:5px;padding-right:5px;font-size:10px;letter-spacing:-.1px}}
 .weather-compact .wind-plan{font-size:10px;font-weight:700;color:#536d8c;background:#eef3f8;border-radius:6px;padding:2px 6px;white-space:nowrap}.spot-approach{display:block;font-size:9px;color:#536d8c;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}@media(max-width:380px){.weather-compact .wind-plan{font-size:9px;padding:2px 5px}.spot-approach{font-size:8px}}
 .manual-confirm-fields.hidden{display:none}.confirm-field input{font-size:16px;line-height:1.2}.confirm-sources input[type="checkbox"]{width:20px;height:20px;flex:0 0 20px}
+
+.confirm-field em{font-style:normal;color:#b0b4bb;font-size:9px}.confirm-actions .secondary{background:#f1f2f4;color:#626873;border-color:#e1e3e7}
