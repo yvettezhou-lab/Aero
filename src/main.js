@@ -1,0 +1,120 @@
+import './style.css';
+
+const AIRPORTS = [
+  ['KMG','昆明长水','Kunming'],['PEK','北京首都','Beijing'],['PKX','北京大兴','Beijing'],
+  ['PVG','上海浦东','Shanghai'],['SHA','上海虹桥','Shanghai'],['CAN','广州白云','Guangzhou'],
+  ['SZX','深圳宝安','Shenzhen'],['CTU','成都天府','Chengdu'],['TFU','成都天府','Chengdu'],
+  ['HKG','香港','Hong Kong'],['SIN','新加坡樟宜','Singapore'],['BKK','曼谷素万那普','Bangkok'],
+  ['KUL','吉隆坡','Kuala Lumpur'],['NRT','东京成田','Tokyo'],['HND','东京羽田','Tokyo'],
+  ['ICN','首尔仁川','Seoul'],['TPE','台北桃园','Taipei'],['MNL','马尼拉','Manila']
+];
+
+const WIDEBODY = /^(A3[0-9]{2}|A340|A350|A380|B747|B767|B77[0-9]|B78[0-9]|DC10|MD11|IL96|L1011)/i;
+
+const state = {
+  airport: localStorage.getItem('aero-airport') || 'KMG',
+  date: new Date().toISOString().slice(0,10),
+  direction: 'all',
+  widebody: false,
+  airline: 'all',
+  q: '',
+  flights: [],
+  loading: false,
+  error: ''
+};
+
+const app = document.querySelector('#app');
+
+function esc(s=''){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function airportName(code){ const a=AIRPORTS.find(x=>x[0]===code); return a ? a[1] : code; }
+function isWide(type=''){ return WIDEBODY.test(type.replace(/[- ]/g,'')); }
+function timeOf(f){
+  const t=f?.departure?.scheduledTime?.local || f?.departure?.revisedTime?.local || f?.arrival?.scheduledTime?.local || '';
+  return t ? t.slice(11,16) : '--:--';
+}
+function cityOf(f, side){
+  const x=f?.[side]?.airport;
+  return x?.iata || x?.icao || x?.name || '—';
+}
+function aircraft(f){
+  const a=f?.aircraft || {};
+  return a.model || a.type || a.icao || a.iata || f?.aircraftType || '未知机型';
+}
+function airlineOf(f){
+  return f?.airline?.name || f?.airline?.iata || f?.airline?.icao || '未知航司';
+}
+function numberOf(f){ return f?.number || f?.flightNumber || '—'; }
+
+function render(){
+  const airlines=[...new Set(state.flights.map(airlineOf).filter(x=>x!=='未知航司'))].sort();
+  const filtered=state.flights.filter(f=>{
+    const type=aircraft(f), airline=airlineOf(f), n=numberOf(f);
+    return (!state.widebody || isWide(type))
+      && (state.airline==='all' || airline===state.airline)
+      && (!state.q || (n+' '+airline+' '+type).toLowerCase().includes(state.q.toLowerCase()));
+  });
+  const dep=filtered.filter(f=>f.__direction==='dep'), arr=filtered.filter(f=>f.__direction==='arr');
+  app.innerHTML=`
+  <main>
+    <header><div class="brand"><span class="logo">✈</span><div><h1>Aero</h1><p>看今天飞什么机</p></div></div><button class="refresh" id="refresh">↻</button></header>
+    <section class="panel">
+      <div class="row">
+        <label class="field grow"><span>机场</span><select id="airport">${AIRPORTS.map(a=>`<option value="${a[0]}" ${a[0]===state.airport?'selected':''}>${a[0]} · ${a[1]}</option>`).join('')}</select></label>
+        <label class="field date"><span>日期</span><input id="date" type="date" value="${state.date}"></label>
+      </div>
+      <div class="chips">
+        <button class="chip ${state.direction==='all'?'on':''}" data-dir="all">全部</button>
+        <button class="chip ${state.direction==='dep'?'on':''}" data-dir="dep">出发</button>
+        <button class="chip ${state.direction==='arr'?'on':''}" data-dir="arr">到达</button>
+        <button class="chip wide ${state.widebody?'on':''}" id="wide">✦ 只看宽体</button>
+      </div>
+      <div class="row">
+        <label class="field grow"><span>航司</span><select id="airline"><option value="all">全部航司</option>${airlines.map(a=>`<option value="${esc(a)}" ${a===state.airline?'selected':''}>${esc(a)}</option>`).join('')}</select></label>
+        <label class="field grow"><span>搜索</span><input id="q" placeholder="航班号 / 机型" value="${esc(state.q)}"></label>
+      </div>
+    </section>
+    <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
+    ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
+    ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
+    ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
+    <div class="flight-list">${state.direction!=='arr' ? section('出发',dep) : ''}${state.direction!=='dep' ? section('到达',arr) : ''}</div>
+    <footer>数据源：AeroDataBox · 机型按 ICAO 类型自动判断宽体</footer>
+  </main>`;
+  bind();
+}
+function section(title,list){
+  if(!list.length) return '';
+  return `<section class="group"><h2>${title}<em>${list.length}</em></h2>${list.sort((a,b)=>timeOf(a).localeCompare(timeOf(b))).map(f=>{
+    const type=aircraft(f), wide=isWide(type);
+    return `<article class="flight ${wide?'is-wide':''}">
+      <time>${timeOf(f)}</time>
+      <div class="route"><b>${esc(numberOf(f))}</b><span>${esc(airlineOf(f))}</span></div>
+      <div class="to">${esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))}</div>
+      <div class="aircraft"><b>${esc(type)}</b>${wide?'<span>宽体</span>':''}</div>
+    </article>`
+  }).join('')}</section>`;
+}
+function bind(){
+  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);load();};
+  document.querySelector('#date').onchange=e=>{state.date=e.target.value;load();};
+  document.querySelector('#airline').onchange=e=>{state.airline=e.target.value;render();};
+  document.querySelector('#q').oninput=e=>{state.q=e.target.value;render();};
+  document.querySelector('#wide').onclick=()=>{state.widebody=!state.widebody;render();};
+  document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
+  document.querySelector('#refresh').onclick=load;
+}
+async function load(){
+  state.loading=true; state.error=''; render();
+  try{
+    const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(state.date)}`);
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.error || '读取航班失败');
+    state.flights=[
+      ...(data.departures||[]).map(f=>({...f,__direction:'dep'})),
+      ...(data.arrivals||[]).map(f=>({...f,__direction:'arr'}))
+    ];
+  }catch(e){
+    state.error=e.message.includes('API')?e.message:'暂时无法读取航班数据。请检查 API 配置。';
+  }finally{state.loading=false;render();}
+}
+render(); load();
