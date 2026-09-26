@@ -30,6 +30,7 @@ const state = {
   flights: [],
   dayFlights: {},
   sourceMeta: {},
+  detailFlight: null,
   loading: false,
   error: ''
 };
@@ -125,10 +126,16 @@ function render(){
     ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
     ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
+${state.detailFlight ? detailModal(state.detailFlight) : ''}
     <div class="flight-list">${state.direction!=='arr' ? section('出发',dep) : ''}${state.direction!=='dep' ? section('到达',arr) : ''}</div>
     <footer>数据源：AeroDataBox · 默认隐藏代码共享重复航班 · 更新时间来自数据源</footer>
   </main>`;
   bind();
+}
+function detailModal(f){
+  const info=aircraftDisplay(f), l=liveryOf(f);
+  const sources=['AeroDataBox']; if(f.__sources?.includes('FlightAware')) sources.push('FlightAware');
+  return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2><div class="modal-grid"><span>航司</span><b>${esc(airlineOf(f))}</b><span>机型</span><b>${esc(info.current)}</b><span>状态</span><b>${esc(info.level)}</b><span>机号</span><b>${esc(info.registration||'暂无')}</b><span>彩绘</span><b>${l?'已识别':'未识别'}</b><span>数据源</span><b>${esc(sources.join(' + '))}</b></div><p class="modal-note">彩绘只在数据源明确提供或后续机号库确认时标记；没有证据不会猜测。</p></div></div>`;
 }
 function spottingPlan(list){
   const windows=[];
@@ -168,6 +175,9 @@ function bind(){
   document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{const t=b.dataset.type;if(!t)state.aircraftTypes=[];else state.aircraftTypes=state.aircraftTypes.includes(t)?state.aircraftTypes.filter(x=>x!==t):[...state.aircraftTypes,t];render();});
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
   document.querySelector('#refresh').onclick=loadRange;
+  document.querySelectorAll('.flight').forEach(el=>el.onclick=()=>{const n=el.querySelector('.route b')?.textContent; const f=state.flights.find(x=>numberOf(x)===n); if(f) {state.detailFlight=f;render();}});
+  document.querySelector('#closeModal')?.addEventListener('click',()=>{state.detailFlight=null;render();});
+  document.querySelector('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'){state.detailFlight=null;render();}});
 }
 async function fetchDay(date){
   const key=`aero:${state.airport}:${date}`;
