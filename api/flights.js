@@ -31,14 +31,14 @@ function faToFlight(x,direction){
   };
 }
 export default async function handler(req,res){
-  const {airport,date}=req.query;
+  const {airport,date,showCodeshare}=req.query;
   const key=process.env.AERODATABOX_API_KEY;
   if(!key) return res.status(500).json({error:'API Key 尚未配置'});
   if(!airport||!date) return res.status(400).json({error:'缺少机场或日期'});
   try{
     const windows=[['00:00','11:59'],['12:00','23:59']];
     const parts=await Promise.all(windows.map(([fromTime,toTime])=>{
-      const url=BASE+'/flights/airports/iata/'+encodeURIComponent(airport)+'/'+date+'T'+fromTime+'/'+date+'T'+toTime+'?withLeg=true&withCodeshared=false';
+      const url=BASE+'/flights/airports/iata/'+encodeURIComponent(airport)+'/'+date+'T'+fromTime+'/'+date+'T'+toTime+'?withLeg=true&withCodeshared='+ (showCodeshare==='true'?'true':'false') + '';
       return fetchBox(url,key);
     }));
     let departures=parts.flatMap(x=>x.departures||[]);
