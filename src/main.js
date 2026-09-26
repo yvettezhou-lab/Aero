@@ -14,6 +14,8 @@ const WIDEBODY = /\b(A300|A310|A330|A340|A350|A380|B747|B767|B77[0-9]|B78[0-9]|D
 const state = {
   airport: localStorage.getItem('aero-airport') || 'KMG',
   date: new Date().toISOString().slice(0,10),
+  days: 3,
+  activeDay: 0,
   direction: 'all',
   widebody: false,
   airline: 'all',
@@ -47,6 +49,12 @@ function airlineOf(f){
 }
 function numberOf(f){ return f?.number || f?.flightNumber || '—'; }
 
+function dayLabel(offset){
+  const d=new Date(state.date+'T12:00:00'); d.setDate(d.getDate()+offset);
+  const iso=d.toISOString().slice(0,10);
+  const wd=['日','一','二','三','四','五','六'][d.getDay()];
+  return {iso,label:offset===0?'今天':offset===1?'明天':offset===2?'后天':`${d.getMonth()+1}/${d.getDate()}`,wd};
+}
 function render(){
   const airlines=[...new Set(state.flights.map(airlineOf).filter(x=>x!=='未知航司'))].sort();
   const filtered=state.flights.filter(f=>{
@@ -81,6 +89,7 @@ function render(){
         <label class="field grow"><span>最晚</span><input id="timeTo" type="time" value="${state.timeTo}"></label>
       </div>
     </section>
+    <div class="days">${[0,1,2].map(i=>{const d=dayLabel(i);return `<button class="day ${i===state.activeDay?'on':''}" data-day="${i}"><b>${d.label}</b><span>${d.iso.slice(5).replace('-','/')} 周${d.wd}</span></button>`}).join('')}</div>
     <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
     ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
@@ -103,8 +112,9 @@ function section(title,list){
   }).join('')}</section>`;
 }
 function bind(){
-  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);load();};
-  document.querySelector('#date').onchange=e=>{state.date=e.target.value;load();};
+  document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.day);state.date=dayLabel(state.activeDay).iso;load();});
+  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.date=e.target.value;load();};
+  document.querySelector('#date').onchange=e=>{state.date=e.target.value;state.activeDay=0;load();};
   document.querySelector('#airline').onchange=e=>{state.airline=e.target.value;render();};
   document.querySelector('#q').oninput=e=>{state.q=e.target.value;render();};
   document.querySelector('#timeFrom').onchange=e=>{state.timeFrom=e.target.value;render();};
