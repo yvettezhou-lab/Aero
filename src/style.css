@@ -18,3 +18,5 @@
 .log-row:first-child{border-top:0}.log-row b{display:block;font-size:12px}.log-row span,.log-row small,.log-row em{display:block;font-size:9px;color:#8c939c;margin-top:2px;font-style:normal}
 .log-row strong{font-size:11px}.log-row em{color:#a45628}.log-empty{font-size:10px;color:#9297a0;line-height:1.5;padding:6px 0}
 @media(max-width:500px){.seen-btn{grid-column:2/5}.log-row{grid-template-columns:1fr 1.25fr}}
+
+.weather-detail{border-top:1px solid #eef0f2;margin-top:10px}.weather-detail summary{padding:10px 2px 2px;color:#68707c;font-size:12px;cursor:pointer;list-style:none}.weather-detail summary::-webkit-details-marker{display:none}.weather-detail summary i{float:right;font-style:normal;transition:transform .15s}.weather-detail[open] summary i{transform:rotate(180deg)}.weather-detail-body{padding-top:8px}
