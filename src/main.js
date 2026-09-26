@@ -26,6 +26,7 @@ const state = {
   timeFrom: '00:00',
   timeTo: '23:59',
   flights: [],
+  dayFlights: {},
   loading: false,
   error: ''
 };
@@ -136,9 +137,9 @@ function section(title,list){
   }).join('')}</section>`;
 }
 function bind(){
-  document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.day);state.date=dayLabel(state.activeDay).iso;load();});
-  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.date=e.target.value;load();};
-  document.querySelector('#date').onchange=e=>{state.date=e.target.value;state.activeDay=0;load();};
+  document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.day);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
+  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.date=new Date().toISOString().slice(0,10);state.dayFlights={};loadRange();};
+  document.querySelector('#date').onchange=e=>{state.date=e.target.value;state.activeDay=0;state.dayFlights={};loadRange();};
   document.querySelector('#airline').onchange=e=>{state.airline=e.target.value;render();};
   document.querySelector('#q').oninput=e=>{state.q=e.target.value;render();};
   document.querySelector('#timeFrom').onchange=e=>{state.timeFrom=e.target.value;render();};
@@ -150,18 +151,41 @@ function bind(){
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
   document.querySelector('#refresh').onclick=load;
 }
-async function load(){
-  state.loading=true; state.error=''; render();
+async function fetchDay(date){
+  const key=`aero:${state.airport}:${date}`;
   try{
-    const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(state.date)}`);
-    const data=await r.json();
-    if(!r.ok) throw new Error(data.error || '读取航班失败');
-    state.flights=[
-      ...(data.departures||[]).map(f=>({...f,__direction:'dep'})),
-      ...(data.arrivals||[]).map(f=>({...f,__direction:'arr'}))
-    ];
+    const cached=JSON.parse(localStorage.getItem(key)||'null');
+    if(cached?.savedAt && Date.now()-cached.savedAt<10*60*1000) return cached.flights||[];
+  }catch{}
+  const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(date)}`);
+  const data=await r.json();
+  if(!r.ok) throw new Error(data.error||'读取航班失败');
+  const flights=[
+    ...(data.departures||[]).map(f=>({...f,__direction:'dep'})),
+    ...(data.arrivals||[]).map(f=>({...f,__direction:'arr'}))
+  ];
+  try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights}));}catch{}
+  return flights;
+}
+async function loadRange(){
+  state.loading=true; state.error=''; render();
+  const dates=[0,1,2].map(i=>dayLabel(i).iso);
+  try{
+    const results=await Promise.all(dates.map(fetchDay));
+    dates.forEach((d,i)=>state.dayFlights[d]=results[i]);
+    state.flights=state.dayFlights[state.date]||[];
   }catch(e){
     state.error=e.message.includes('API')?e.message:'暂时无法读取航班数据。请检查 API 配置。';
   }finally{state.loading=false;render();}
 }
-render(); load();
+async function load(){
+  state.loading=true; state.error=''; render();
+  try{
+    const flights=await fetchDay(state.date);
+    state.dayFlights[state.date]=flights;
+    state.flights=flights;
+  }catch(e){
+    state.error=e.message.includes('API')?e.message:'暂时无法读取航班数据。请检查 API 配置。';
+  }finally{state.loading=false;render();}
+}
+render(); loadRange();
