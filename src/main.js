@@ -191,6 +191,7 @@ function weatherCard(){
   const code=Number(h.weather_code?.[ni]),vis=Number(h.visibility?.[ni]),wind=Number(h.wind_speed_10m?.[ni]),cloud=Number(h.cloud_cover_low?.[ni]),s=weatherSummary(state.date);
   return '<div class="weather-compact"><b>🌤 '+esc(airportName(state.airport))+'</b><span>'+weatherIcon(code)+' '+weatherText(code)+'</span><em>能见度 '+(Number.isFinite(vis)?Math.round(vis/100)/10+'km':'—')+'</em><em>风 '+(Number.isFinite(wind)?Math.round(wind):'—')+'km/h</em><em>低云 '+(Number.isFinite(cloud)?Math.round(cloud):'—')+'%</em><em>雨 '+(s?s.maxRain:'—')+'%</em></div>';
 }
+function dayTabs(){return [0,1,2].map(i=>{const d=dayLabel(i);return '<button class="day '+(i===state.activeDay?'on':'')+'" data-day="'+i+'"><b>'+d.label+'</b></button>';}).join('');}
 function dayLabel(offset){
   const d=new Date(state.baseDate+'T12:00:00'); d.setDate(d.getDate()+offset);
   const iso=d.toISOString().slice(0,10);
@@ -208,9 +209,11 @@ function render(){
   <main>
     <header><div class="brand"><span class="logo">✈</span><div><h1>Aero</h1><p>看今天飞什么机</p></div></div><button class="refresh" id="refresh">↻</button></header>
     <section class="panel">
-      <label class="field airport-field"><span>机场</span><select id="airport">${AIRPORTS.map(a=>`<option value="${a[0]}" ${a[0]===state.airport?"selected":""}>${a[0]} · ${a[1]}</option>`).join("")}</select></label>
-      ${weatherCard()}
-      <div class="chips">
+      <div class="airport-date-row">
+              <label class="field airport-field"><span>机场</span><select id="airport">${AIRPORTS.map(a=>`<option value="${a[0]}" ${a[0]===state.airport?"selected":""}>${a[0]} · ${a[1]}</option>`).join("")}</select></label>
+        <div class="days-inline">${dayTabs()}</div>
+      </div>
+      ${weatherCard()}  <div class="chips">
         <button class="chip wide ${state.widebody?"on":""}" id="wide">✦ 只看宽体</button>
         <button class="chip ${state.special?"on":""}" id="special">🎨 只看彩绘</button>
         <button class="chip ${state.showCodeshare?"on":""}" id="codeshare">显示共享</button>
@@ -222,7 +225,7 @@ function render(){
         <label class="field compact-time-field"><span>时间</span><div class="time-pair"><input id="timeFrom" type="time" value="${state.timeFrom}"><i>—</i><input id="timeTo" type="time" value="${state.timeTo}"></div></label>
       </div>
     </section>
-    <div class="days">${[0,1,2].map(i=>{const d=dayLabel(i);return `<button class="day ${i===state.activeDay?'on':''}" data-day="${i}"><b>${d.label}</b><span>${d.iso.slice(5).replace('-','/')} 周${d.wd}</span></button>`}).join('')}</div>
+
     <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
     ${spottingOverview()}\n    ${spottingLogCard()}\n    <div class="flight-tabs" role="tablist" aria-label="航班列表">\n      <button class="${state.listDirection==="dep"?"on":""}" data-dir="dep">出发 <span>${depCount}</span></button>\n      <button class="${state.listDirection==="arr"?"on":""}" data-dir="arr">到达 <span>${arrCount}</span></button>\n    </div>\n    ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
