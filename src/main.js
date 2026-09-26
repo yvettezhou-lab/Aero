@@ -300,15 +300,14 @@ function bind(){
   document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.day);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
   document.querySelectorAll('[data-weather-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.weatherDay);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
   document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.baseDate=localISO();state.date=state.baseDate;state.dayFlights={};state.sourceMeta={};loadRange();loadWeather();};
-  document.querySelector('#date').onchange=e=>{state.baseDate=e.target.value;state.date=state.baseDate;state.activeDay=0;state.dayFlights={};state.sourceMeta={};loadRange();loadWeather();};
   document.querySelector('#q').oninput=e=>{state.q=e.target.value;render();};
   document.querySelector('#timeFrom').onchange=e=>{state.timeFrom=e.target.value;render();};
   document.querySelector('#timeTo').onchange=e=>{state.timeTo=e.target.value;render();};
   document.querySelector('#wide').onclick=()=>{state.widebody=!state.widebody;render();};
   document.querySelector('#special').onclick=()=>{state.special=!state.special;render();};
   document.querySelector('#codeshare').onclick=()=>{state.showCodeshare=!state.showCodeshare;render();};
-  document.querySelectorAll('[data-airline]').forEach(b=>b.onclick=()=>{const a=b.dataset.airline;if(!a)state.selectedAirlines=[];else state.selectedAirlines=state.selectedAirlines.includes(a)?state.selectedAirlines.filter(x=>x!==a):[...state.selectedAirlines,a];render();});
-  document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{const t=b.dataset.type;if(!t)state.aircraftTypes=[];else state.aircraftTypes=state.aircraftTypes.includes(t)?state.aircraftTypes.filter(x=>x!==t):[...state.aircraftTypes,t];render();});
+  document.querySelector('#airlineSelect').onchange=e=>{state.selectedAirlines=e.target.value?[e.target.value]:[];render();};
+  document.querySelector('#aircraftSelect').onchange=e=>{state.aircraftTypes=e.target.value?[e.target.value]:[];render();};
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.listDirection=b.dataset.dir;render();});
   document.querySelector('.spotting')?.addEventListener('toggle',e=>{state.spottingOpen=e.currentTarget.open;localStorage.setItem('aero-spotting-open',state.spottingOpen?'1':'0');});
   document.querySelector('#refresh').onclick=loadRange;
