@@ -102,6 +102,12 @@ function filterFlights(list=[]){
   });
 }
 
+function sourceFooter(){
+  const meta=state.sourceMeta[state.date]?.secondSource;
+  let second='FlightAware 未配置';
+  if(meta?.enabled) second=meta.ok?'FlightAware ✓ 交叉确认':'FlightAware ⚠ 未成功连接';
+  return '<div class="source-bar"><span>AeroDataBox ✓</span><span>'+second+'</span></div>';
+}
 function dayLabel(offset){
   const d=new Date(state.baseDate+'T12:00:00'); d.setDate(d.getDate()+offset);
   const iso=d.toISOString().slice(0,10);
@@ -148,7 +154,8 @@ function render(){
     ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
 ${state.detailFlight ? detailModal(state.detailFlight) : ''}
     <div class="flight-list">${state.direction!=='arr' ? section('出发',dep) : ''}${state.direction!=='dep' ? section('到达',arr) : ''}</div>
-    <footer>数据源：AeroDataBox · 默认隐藏代码共享重复航班 · 3天观机计划跟随当前筛选条件</footer>
+    ${sourceFooter()}
+    <footer>默认隐藏代码共享重复航班 · 3天观机计划跟随当前筛选条件</footer>
   </main>`;
   bind();
 }
@@ -216,7 +223,7 @@ async function fetchDay(date){
   const key=`aero:${state.airport}:${date}:${state.showCodeshare}`;
   try{
     const cached=JSON.parse(localStorage.getItem(key)||'null');
-    if(cached?.savedAt && Date.now()-cached.savedAt<10*60*1000){const flights=cached.flights||[];flights.__fetchedAt=cached.fetchedAt||'';return flights;}
+    if(cached?.savedAt && Date.now()-cached.savedAt<10*60*1000){const flights=cached.flights||[];flights.__fetchedAt=cached.fetchedAt||'';flights.__secondSource=cached.secondSource||null;return flights;}
   }catch{}
   const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(date)}&showCodeshare=${state.showCodeshare}`);
   const data=await r.json();
@@ -226,14 +233,20 @@ async function fetchDay(date){
     ...(data.arrivals||[]).map(f=>({...f,__direction:'arr'}))
   ];
   flights.__fetchedAt=data.fetchedAt||'';
-  try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights, fetchedAt:data.fetchedAt||''}));}catch{}
+  flights.__secondSource=data.secondSource||null;
+  try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights, fetchedAt:data.fetchedAt||'',secondSource:data.secondSource||null}));}catch{}
   return flights;
 }
 async function loadRange(){
   state.loading=true; state.error=''; render();
   const dates=[0,1,2].map(i=>dayLabel(i).iso);
   const results=await Promise.allSettled(dates.map(fetchDay));
-  results.forEach((r,i)=>{if(r.status==='fulfilled') state.dayFlights[dates[i]]=r.value;});
+  results.forEach((r,i)=>{
+    if(r.status==='fulfilled'){
+      state.dayFlights[dates[i]]=r.value;
+      state.sourceMeta[dates[i]]={secondSource:r.value.__secondSource||null,fetchedAt:r.value.__fetchedAt||''};
+    }
+  });
   const failed=results.filter(r=>r.status==='rejected').length;
   state.flights=state.dayFlights[state.date]||[];
   if(failed===3) state.error='暂时无法读取航班数据。请检查 API 配置。';
