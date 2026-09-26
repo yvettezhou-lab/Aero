@@ -259,7 +259,14 @@ function spottingPlan(list){
     if(!inWin.length) continue;
     const wide=inWin.filter(f=>isWide(aircraftDisplay(f).current)).length;
     const livery=inWin.filter(f=>Boolean(liveryOf(f))).length;
-    if(wide||livery) windows.push({from,to,count:inWin.length,wide,livery});
+    const hasFilter=state.widebody||state.special||state.aircraftTypes.length||state.selectedAirlines.length||state.q||state.timeFrom!=='00:00'||state.timeTo!=='23:59';
+    if(hasFilter ? (wide||livery) : inWin.length) {
+      windows.push({
+        from,to,count:inWin.length,
+        wide:state.widebody?wide:0,
+        livery:state.special?livery:0
+      });
+    }
   }
   return windows.slice(0,4);
 }
