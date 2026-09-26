@@ -13,7 +13,8 @@ const WIDEBODY = /\b(A300|A310|A330|A340|A350|A380|B747|B767|B77[0-9]|B78[0-9]|D
 
 const state = {
   airport: localStorage.getItem('aero-airport') || 'KMG',
-  date: new Date().toISOString().slice(0,10),
+  date: localISO(),
+  baseDate: localISO(),
   days: 3,
   activeDay: 0,
   direction: 'all',
@@ -32,6 +33,7 @@ const state = {
 };
 
 const app = document.querySelector('#app');
+function localISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 
 function esc(s=''){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function airportName(code){ const a=AIRPORTS.find(x=>x[0]===code); return a ? a[1] : code; }
@@ -68,7 +70,7 @@ function airlineOf(f){
 function numberOf(f){ return f?.number || f?.flightNumber || '—'; }
 
 function dayLabel(offset){
-  const d=new Date(state.date+'T12:00:00'); d.setDate(d.getDate()+offset);
+  const d=new Date(state.baseDate+'T12:00:00'); d.setDate(d.getDate()+offset);
   const iso=d.toISOString().slice(0,10);
   const wd=['日','一','二','三','四','五','六'][d.getDay()];
   return {iso,label:offset===0?'今天':offset===1?'明天':offset===2?'后天':`${d.getMonth()+1}/${d.getDate()}`,wd};
@@ -87,6 +89,7 @@ function render(){
       && (!state.q || (n+' '+airline+' '+type).toLowerCase().includes(state.q.toLowerCase()))
       && t >= state.timeFrom && t <= state.timeTo;
   });
+  const plan=spottingPlan(state.flights);
   const dep=filtered.filter(f=>f.__direction==='dep'), arr=filtered.filter(f=>f.__direction==='arr');
   app.innerHTML=`
   <main>
@@ -116,6 +119,7 @@ function render(){
     </section>
     <div class="days">${[0,1,2].map(i=>{const d=dayLabel(i);return `<button class="day ${i===state.activeDay?'on':''}" data-day="${i}"><b>${d.label}</b><span>${d.iso.slice(5).replace('-','/')} 周${d.wd}</span></button>`}).join('')}</div>
     <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
+    ${plan ? `<section class="spotting"><div class="spotting-head"><b>👀 观机计划</b><span>按 2 小时窗口汇总</span></div>${plan.map(x=>`<div class="spot-window"><div><b>${x.from}–${x.to}</b><small>${x.count} 个航班</small></div><div class="spot-tags">${x.wide?`<span>宽体 ${x.wide}</span>`:''}${x.livery?`<span class="livery">🎨 彩绘 ${x.livery}</span>`:''}</div></div>`).join('')}</section>` : ''}
     ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
     ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
@@ -123,6 +127,18 @@ function render(){
     <footer>数据源：AeroDataBox · 机型按 ICAO 类型自动判断宽体</footer>
   </main>`;
   bind();
+}
+function spottingPlan(list){
+  const windows=[];
+  for(let h=6;h<22;h+=2){
+    const from=String(h).padStart(2,'0')+':00', to=String(h+2).padStart(2,'0')+':00';
+    const inWin=list.filter(f=>{const t=timeOf(f);return t>=from&&t<to;});
+    if(!inWin.length) continue;
+    const wide=inWin.filter(f=>isWide(aircraftDisplay(f).current)).length;
+    const livery=inWin.filter(f=>Boolean(f?.aircraft?.isSpecialLivery||f?.aircraft?.specialLivery||f?.specialLivery||f?.aircraft?.livery)).length;
+    if(wide||livery) windows.push({from,to,count:inWin.length,wide,livery});
+  }
+  return windows.slice(0,4);
 }
 function section(title,list){
   if(!list.length) return '';
@@ -138,8 +154,8 @@ function section(title,list){
 }
 function bind(){
   document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.day);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
-  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.date=new Date().toISOString().slice(0,10);state.dayFlights={};loadRange();};
-  document.querySelector('#date').onchange=e=>{state.date=e.target.value;state.activeDay=0;state.dayFlights={};loadRange();};
+  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.baseDate=localISO();state.date=state.baseDate;state.dayFlights={};loadRange();};
+  document.querySelector('#date').onchange=e=>{state.baseDate=e.target.value;state.date=state.baseDate;state.activeDay=0;state.dayFlights={};loadRange();};
   document.querySelector('#airline').onchange=e=>{state.airline=e.target.value;render();};
   document.querySelector('#q').oninput=e=>{state.q=e.target.value;render();};
   document.querySelector('#timeFrom').onchange=e=>{state.timeFrom=e.target.value;render();};
@@ -149,7 +165,7 @@ function bind(){
   document.querySelectorAll('[data-airline]').forEach(b=>b.onclick=()=>{const a=b.dataset.airline;if(!a)state.selectedAirlines=[];else state.selectedAirlines=state.selectedAirlines.includes(a)?state.selectedAirlines.filter(x=>x!==a):[...state.selectedAirlines,a];render();});
   document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{const t=b.dataset.type;if(!t)state.aircraftTypes=[];else state.aircraftTypes=state.aircraftTypes.includes(t)?state.aircraftTypes.filter(x=>x!==t):[...state.aircraftTypes,t];render();});
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
-  document.querySelector('#refresh').onclick=load;
+  document.querySelector('#refresh').onclick=loadRange;
 }
 async function fetchDay(date){
   const key=`aero:${state.airport}:${date}`;
@@ -170,13 +186,13 @@ async function fetchDay(date){
 async function loadRange(){
   state.loading=true; state.error=''; render();
   const dates=[0,1,2].map(i=>dayLabel(i).iso);
-  try{
-    const results=await Promise.all(dates.map(fetchDay));
-    dates.forEach((d,i)=>state.dayFlights[d]=results[i]);
-    state.flights=state.dayFlights[state.date]||[];
-  }catch(e){
-    state.error=e.message.includes('API')?e.message:'暂时无法读取航班数据。请检查 API 配置。';
-  }finally{state.loading=false;render();}
+  const results=await Promise.allSettled(dates.map(fetchDay));
+  results.forEach((r,i)=>{if(r.status==='fulfilled') state.dayFlights[dates[i]]=r.value;});
+  const failed=results.filter(r=>r.status==='rejected').length;
+  state.flights=state.dayFlights[state.date]||[];
+  if(failed===3) state.error='暂时无法读取航班数据。请检查 API 配置。';
+  else if(failed) state.error='部分日期暂时无法更新，已显示成功读取的数据。';
+  state.loading=false;render();
 }
 async function load(){
   state.loading=true; state.error=''; render();
