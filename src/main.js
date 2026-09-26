@@ -73,9 +73,10 @@ function dayLabel(offset){
   return {iso,label:offset===0?'今天':offset===1?'明天':offset===2?'后天':`${d.getMonth()+1}/${d.getDate()}`,wd};
 }
 function render(){
+  const aircraftTypes=[...new Set(state.flights.map(f=>aircraftDisplay(f).current).filter(x=>x&&x!=='未知机型'))].sort();
   const airlines=[...new Set(state.flights.map(airlineOf).filter(x=>x!=='未知航司'))].sort();
   const filtered=state.flights.filter(f=>{
-    const type=aircraft(f), airline=airlineOf(f), n=numberOf(f);
+    const type=aircraftDisplay(f).current, airline=airlineOf(f), n=numberOf(f);
     const t=timeOf(f);
     const special=Boolean(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery || f?.specialLivery || f?.aircraft?.livery);
     return (!state.widebody || isWide(type))
@@ -114,7 +115,7 @@ function render(){
     </section>
     <div class="days">${[0,1,2].map(i=>{const d=dayLabel(i);return `<button class="day ${i===state.activeDay?'on':''}" data-day="${i}"><b>${d.label}</b><span>${d.iso.slice(5).replace('-','/')} 周${d.wd}</span></button>`}).join('')}</div>
     <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
-    ${state.error ? `<div class="notice error">${esc(state.error)}</div>${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${info.latest&&info.latest!==info.planned?`<small class="aircraft-note">计划 ${esc(info.planned)} · 最新 ${esc(info.latest)}</small>`:''}` : ''}
+    ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
     ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
     <div class="flight-list">${state.direction!=='arr' ? section('出发',dep) : ''}${state.direction!=='dep' ? section('到达',arr) : ''}</div>
@@ -125,12 +126,12 @@ function render(){
 function section(title,list){
   if(!list.length) return '';
   return `<section class="group"><h2>${title}<em>${list.length}</em></h2>${list.sort((a,b)=>timeOf(a).localeCompare(timeOf(b))).map(f=>{
-    const type=aircraft(f), wide=isWide(type);
+    const info=aircraftDisplay(f), type=info.current, wide=isWide(type);
     return `<article class="flight ${wide?'is-wide':''}">
       <time>${timeOf(f)}</time>
       <div class="route"><b>${esc(numberOf(f))}</b><span>${esc(airlineOf(f))}</span></div>
       <div class="to">${esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))}</div>
-      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>宽体</span>':''}${(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery || f?.specialLivery || f?.aircraft?.livery)?'<span class="livery">🎨 彩绘</span>':''}</div>
+      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>宽体</span>':''}${(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery || f?.specialLivery || f?.aircraft?.livery)?'<span class="livery">🎨 彩绘</span>':''}</div>${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${info.latest&&info.latest!==info.planned?`<small class="aircraft-note">计划 ${esc(info.planned)} · 最新 ${esc(info.latest)}</small>`:''}
     </article>`
   }).join('')}</section>`;
 }
