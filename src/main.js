@@ -18,6 +18,7 @@ const state = {
   activeDay: 0,
   direction: 'all',
   widebody: false,
+  special: false,
   airline: 'all',
   q: '',
   timeFrom: '00:00',
@@ -60,7 +61,9 @@ function render(){
   const filtered=state.flights.filter(f=>{
     const type=aircraft(f), airline=airlineOf(f), n=numberOf(f);
     const t=timeOf(f);
+    const special=Boolean(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery || f?.specialLivery || f?.aircraft?.livery);
     return (!state.widebody || isWide(type))
+      && (!state.special || special)
       && (state.airline==='all' || airline===state.airline)
       && (!state.q || (n+' '+airline+' '+type).toLowerCase().includes(state.q.toLowerCase()))
       && t >= state.timeFrom && t <= state.timeTo;
@@ -79,6 +82,7 @@ function render(){
         <button class="chip ${state.direction==='dep'?'on':''}" data-dir="dep">出发</button>
         <button class="chip ${state.direction==='arr'?'on':''}" data-dir="arr">到达</button>
         <button class="chip wide ${state.widebody?'on':''}" id="wide">✦ 只看宽体</button>
+        <button class="chip special ${state.special?'on':''}" id="special">🎨 只看彩绘</button>
       </div>
       <div class="row">
         <label class="field grow"><span>航司</span><select id="airline"><option value="all">全部航司</option>${airlines.map(a=>`<option value="${esc(a)}" ${a===state.airline?'selected':''}>${esc(a)}</option>`).join('')}</select></label>
@@ -107,7 +111,7 @@ function section(title,list){
       <time>${timeOf(f)}</time>
       <div class="route"><b>${esc(numberOf(f))}</b><span>${esc(airlineOf(f))}</span></div>
       <div class="to">${esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))}</div>
-      <div class="aircraft"><b>${esc(type)}</b>${wide?'<span>宽体</span>':''}</div>
+      <div class="aircraft"><b>${esc(type)}</b>${wide?'<span>宽体</span>':''}${(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery || f?.specialLivery || f?.aircraft?.livery)?'<span class="livery">🎨 彩绘</span>':''}</div>
     </article>`
   }).join('')}</section>`;
 }
@@ -120,6 +124,7 @@ function bind(){
   document.querySelector('#timeFrom').onchange=e=>{state.timeFrom=e.target.value;render();};
   document.querySelector('#timeTo').onchange=e=>{state.timeTo=e.target.value;render();};
   document.querySelector('#wide').onclick=()=>{state.widebody=!state.widebody;render();};
+  document.querySelector('#special').onclick=()=>{state.special=!state.special;render();};
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
   document.querySelector('#refresh').onclick=load;
 }
