@@ -24,3 +24,15 @@ API Key 不放进前端，由 `/api/flights` 服务端代理请求。
 npm install
 npm run dev
 ```
+
+
+## 数据准确性设计
+
+Aero 的航班数据层采用多源可替换设计：
+- 主源：AeroDataBox（机场 FIDS、未来/历史航班时刻、航班状态）
+- 交叉验证：FlightAware AeroAPI / Cirium FlightStats（按可用 API Key 启用）
+- 同一航班按 operating flight / flight identity 去重，避免 codeshare 重复
+- 机型分为计划机型与最新/实际机型；两者冲突时显示“机型存在差异”
+- 宽体筛选基于标准机型族，而不是简单按航班号猜测
+
+数据源均通过服务端代理，API Key 不进入浏览器。
