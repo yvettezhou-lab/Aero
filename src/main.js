@@ -207,7 +207,7 @@ function render(){
   const plan=spottingPlan(filtered);
   app.innerHTML=`
   <main>
-    <header><div class="brand"><span class="logo">✈</span><div><h1>Aero</h1><p>看今天飞什么机</p></div></div><button class="refresh" id="refresh">↻</button></header>
+    <header><div class="brand"><span class="logo">✈</span><div><h1>Aero</h1><p>看今天飞什么机</p></div></div><button class="refresh" id="refresh">重新获取数据</button></header>
     <section class="panel">
       <div class="airport-date-row">
               <label class="field airport-field"><span>机场</span><select id="airport">${AIRPORTS.map(a=>`<option value="${a[0]}" ${a[0]===state.airport?"selected":""}>${a[0]} · ${a[1]}</option>`).join("")}</select></label>
