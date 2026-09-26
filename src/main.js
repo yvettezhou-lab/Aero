@@ -35,7 +35,10 @@ const state = {
   error: '',
   weather: null,
   weatherLoading: false,
-  weatherError: ''
+  weatherError: '',
+  targets: JSON.parse(localStorage.getItem('aero-targets') || '[]'),
+  targetId: '',
+  spottingLog: JSON.parse(localStorage.getItem('aero-spotting-log') || '[]')
 };
 
 const app = document.querySelector('#app');
@@ -105,6 +108,71 @@ function filterFlights(list=[]){
   });
 }
 
+
+const BUILTIN_TARGETS = [
+  {id:'widebody',name:'宽体',filter:{widebody:true}},
+  {id:'livery',name:'彩绘',filter:{special:true}},
+  {id:'a350',name:'A350',filter:{aircraftTypes:['A350-900','A350-941','A350-900 (A359)','A350']}},
+  {id:'b787',name:'B787',filter:{aircraftTypes:['B787-8','B787-9','B787-10','B787']}}
+];
+
+function targetFilterSnapshot(){
+  return {
+    direction:state.direction, widebody:state.widebody, special:state.special,
+    aircraftTypes:[...state.aircraftTypes], selectedAirlines:[...state.selectedAirlines],
+    showCodeshare:state.showCodeshare, q:state.q, timeFrom:state.timeFrom, timeTo:state.timeTo
+  };
+}
+function saveTargets(){try{localStorage.setItem('aero-targets',JSON.stringify(state.targets));}catch{}}
+function saveSpottingLog(){try{localStorage.setItem('aero-spotting-log',JSON.stringify(state.spottingLog.slice(-300)));}catch{}}
+function applyTarget(target){
+  const f=target?.filter||{};
+  state.targetId=target?.id||'';
+  state.direction=f.direction||'all';
+  state.widebody=Boolean(f.widebody);
+  state.special=Boolean(f.special);
+  state.aircraftTypes=Array.isArray(f.aircraftTypes)?[...f.aircraftTypes]:[];
+  state.selectedAirlines=Array.isArray(f.selectedAirlines)?[...f.selectedAirlines]:[];
+  state.showCodeshare=Boolean(f.showCodeshare);
+  state.q=f.q||'';
+  state.timeFrom=f.timeFrom||'00:00';
+  state.timeTo=f.timeTo||'23:59';
+  render();
+}
+function targetCard(){
+  const all=[...BUILTIN_TARGETS,...state.targets];
+  const current=targetFilterSnapshot();
+  const active=all.find(x=>x.id===state.targetId);
+  const chips=all.map(t=>'<button class="target-chip '+(t.id===state.targetId?'on':'')+'" data-target="'+esc(t.id)+'">'+esc(t.name)+'</button>').join('');
+  return '<section class="target-card"><div class="target-head"><div><b>🎯 观机目标</b><span>一键套用你想看的飞机</span></div><button class="target-save" id="saveTarget">＋ 保存当前</button></div><div class="target-chips">'+chips+'</div>'+
+    (active?'<div class="target-active">当前：<b>'+esc(active.name)+'</b><button id="clearTarget">清除</button></div>':'')+
+    '<div class="target-hint">'+(current.widebody?'宽体 · ':'')+(current.special?'彩绘 · ':'')+(current.aircraftTypes.length?current.aircraftTypes.join('、')+' · ':'')+(current.selectedAirlines.length?current.selectedAirlines.join('、')+' · ':'')+((!current.widebody&&!current.special&&!current.aircraftTypes.length&&!current.selectedAirlines.length)?'当前全部筛选':'')+'</div></section>';
+}
+function recordKey(f){
+  const info=aircraftDisplay(f);
+  return [state.airport,state.date,info.registration||numberOf(f),numberOf(f)].join('|');
+}
+function spottingRecordButton(f){
+  const key=recordKey(f);
+  const seen=state.spottingLog.some(x=>x.key===key);
+  return '<button class="seen-btn '+(seen?'seen':'')+'" data-seen="'+esc(key)+'">'+(seen?'✓ 已看过':'✓ 看到了')+'</button>';
+}
+function markSeen(f){
+  const info=aircraftDisplay(f), l=liveryOf(f), key=recordKey(f);
+  if(!state.spottingLog.some(x=>x.key===key)){
+    state.spottingLog.push({key,airport:state.airport,date:state.date,number:numberOf(f),type:info.current,registration:info.registration||'',livery:l?.name||'',rarity:l?.rarity||'',savedAt:new Date().toISOString()});
+    saveSpottingLog();
+  }
+  state.detailFlight=null;
+  render();
+}
+function spottingLogCard(){
+  const recent=[...state.spottingLog].reverse().slice(0,8);
+  const today=state.spottingLog.filter(x=>x.airport===state.airport&&x.date===state.date);
+  return '<section class="log-card"><div class="log-head"><div><b>📒 我的观机记录</b><span>'+today.length+' 架已记录</span></div><button class="log-clear" id="clearLog">清空</button></div>'+
+    (recent.length?'<div class="log-list">'+recent.map(x=>'<div class="log-row"><div><b>'+esc(x.number)+'</b><span>'+esc(x.airport)+' · '+esc(x.date.slice(5).replace('-','/'))+'</span></div><div><strong>'+esc(x.type)+'</strong>'+(x.registration?'<small>'+esc(x.registration)+'</small>':'')+(x.livery?'<em>🎨 '+esc(x.livery)+' · '+esc(x.rarity||'少见')+'</em>':'')+'</div></div>').join('')+'</div>':'<div class="log-empty">看到飞机后，在详情里点“✓ 看到了”，Aero 会帮你留下记录。</div>')+
+    '</section>';
+}
 function sourceFooter(){
   const meta=state.sourceMeta[state.date]?.secondSource;
   let second='FlightAware 未配置';
@@ -157,7 +225,9 @@ function render(){
     <div class="days">${[0,1,2].map(i=>{const d=dayLabel(i);return `<button class="day ${i===state.activeDay?'on':''}" data-day="${i}"><b>${d.label}</b><span>${d.iso.slice(5).replace('-','/')} 周${d.wd}</span></button>`}).join('')}</div>
     <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
     ${weatherCard()}
+    ${targetCard()}
     ${spottingOverview()}
+    ${spottingLogCard()}
     ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
     ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
@@ -171,7 +241,7 @@ ${state.detailFlight ? detailModal(state.detailFlight) : ''}
 function detailModal(f){
   const info=aircraftDisplay(f), l=liveryOf(f);
   const sources=['AeroDataBox']; if(f.__sources?.includes('FlightAware')) sources.push('FlightAware');
-  return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2>${l?`<div class="livery-detail"><div class="livery-rarity ${liveryClass(l.rarity)}">${esc(l.rarity)}</div><b>${esc(l.name)}彩绘</b></div>`:''}<div class="modal-grid"><span>航司</span><b>${esc(airlineOf(f))}</b><span>机型</span><b>${esc(info.current)}</b><span>状态</span><b>${esc(info.level)}</b><span>机号</span><b>${esc(info.registration||'暂无')}</b><span>彩绘</span><b>${l?'已识别':'未识别'}</b><span>数据源</span><b>${esc(sources.join(' + '))}</b></div><p class="modal-note">彩绘只在数据源明确提供或后续机号库确认时标记；没有证据不会猜测。</p></div></div>`;
+  return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2>${l?`<div class="livery-detail"><div class="livery-rarity ${liveryClass(l.rarity)}">${esc(l.rarity)}</div><b>${esc(l.name)}彩绘</b></div>`:''}<div class="modal-grid"><span>航司</span><b>${esc(airlineOf(f))}</b><span>机型</span><b>${esc(info.current)}</b><span>状态</span><b>${esc(info.level)}</b><span>机号</span><b>${esc(info.registration||'暂无')}</b><span>彩绘</span><b>${l?'已识别':'未识别'}</b><span>数据源</span><b>${esc(sources.join(' + '))}</b></div><div class="modal-actions">${spottingRecordButton(f)}</div><p class="modal-note">彩绘只在数据源明确提供或后续机号库确认时标记；没有证据不会猜测。</p></div></div>`;
 }
 function spottingOverview(){
   const days=[0,1,2].map(i=>{
@@ -206,7 +276,7 @@ function section(title,list){
       <time>${timeOf(f)}</time>
       <div class="route"><b>${esc(numberOf(f))}</b><span>${esc(airlineOf(f))}</span></div>
       <div class="to">${esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))}</div>
-      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>宽体</span>':''}${liveryOf(f)?`<span class="livery-badge ${liveryClass(liveryOf(f).rarity)}">🎨 ${esc(liveryOf(f).rarity)}</span>`:''}</div>${liveryOf(f)?`<div class="livery-mini"><b>${esc(liveryOf(f).name)}彩绘 · ${esc(liveryOf(f).rarity)}</b></div>`:''}${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${f.__sources?.includes('FlightAware')?`<small class="source-ok">✓ FlightAware 交叉确认</small>`:''}${info.conflict?`<small class="aircraft-conflict">⚠ 机型存在差异</small>`:''}${info.updated?`<small class="aircraft-note">更新 ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}
+      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>宽体</span>':''}${liveryOf(f)?`<span class="livery-badge ${liveryClass(liveryOf(f).rarity)}">🎨 ${esc(liveryOf(f).rarity)}</span>`:''}</div>${liveryOf(f)?`<div class="livery-mini"><b>${esc(liveryOf(f).name)}彩绘 · ${esc(liveryOf(f).rarity)}</b></div>`:''}${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${f.__sources?.includes('FlightAware')?`<small class="source-ok">✓ FlightAware 交叉确认</small>`:''}${info.conflict?`<small class="aircraft-conflict">⚠ 机型存在差异</small>`:''}${info.updated?`<small class="aircraft-note">更新 ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}${spottingRecordButton(f)}
     </article>`
   }).join('')}</section>`;
 }
@@ -226,6 +296,16 @@ function bind(){
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
   document.querySelector('#refresh').onclick=loadRange;
   document.querySelectorAll('.flight').forEach(el=>el.onclick=()=>{const id=el.dataset.flightId; const f=state.flights.find(x=>flightIdentity(x)===id); if(f) {state.detailFlight=f;render();}});
+  document.querySelectorAll('[data-target]').forEach(b=>b.onclick=()=>{const id=b.dataset.target;const t=[...BUILTIN_TARGETS,...state.targets].find(x=>x.id===id);if(t)applyTarget(t);});
+  document.querySelector('#clearTarget')?.addEventListener('click',()=>{state.targetId='';state.direction='all';state.widebody=false;state.special=false;state.aircraftTypes=[];state.selectedAirlines=[];state.q='';state.timeFrom='00:00';state.timeTo='23:59';render();});
+  document.querySelector('#saveTarget')?.addEventListener('click',()=>{
+    const name=window.prompt('给这个观机目标起个名字','我的目标');
+    if(!name?.trim()) return;
+    const target={id:'custom-'+Date.now(),name:name.trim(),filter:targetFilterSnapshot()};
+    state.targets.push(target);state.targetId=target.id;saveTargets();render();
+  });
+  document.querySelector('#clearLog')?.addEventListener('click',()=>{if(window.confirm('清空全部观机记录？')){state.spottingLog=[];saveSpottingLog();render();}});
+  document.querySelectorAll('[data-seen]').forEach(b=>b.onclick=e=>{e.stopPropagation();const key=b.dataset.seen;const f=state.flights.find(x=>recordKey(x)===key);if(f)markSeen(f);});
   document.querySelector('#closeModal')?.addEventListener('click',()=>{state.detailFlight=null;render();});
   document.querySelector('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'){state.detailFlight=null;render();}});
 }
