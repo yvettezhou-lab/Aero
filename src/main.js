@@ -18,7 +18,8 @@ const state = {
   baseDate: localISO(),
   days: 3,
   activeDay: 0,
-  direction: 'dep',
+  listDirection: 'dep',
+  spottingOpen: localStorage.getItem('aero-spotting-open') !== '0',
   widebody: false,
   special: false,
   aircraftTypes: [],
@@ -90,10 +91,9 @@ function airlineOf(f){
 }
 function numberOf(f){ return f?.number || f?.flightNumber || '—'; }
 
-function filterFlights(list=[], ignoreDirection=false){
+function filterFlights(list=[]){
   const visible=state.showCodeshare?list:list.filter(f=>!isCodeshare(f));
   return visible.filter(f=>{
-    if(!ignoreDirection && state.direction!=='all' && f.__direction!==state.direction) return false;
     const type=aircraftDisplay(f).current;
     const airline=airlineOf(f);
     const n=numberOf(f);
@@ -118,7 +118,7 @@ const BUILTIN_TARGETS = [
 
 function targetFilterSnapshot(){
   return {
-    direction:state.direction, widebody:state.widebody, special:state.special,
+    widebody:state.widebody, special:state.special,
     aircraftTypes:[...state.aircraftTypes], selectedAirlines:[...state.selectedAirlines],
     showCodeshare:state.showCodeshare, q:state.q, timeFrom:state.timeFrom, timeTo:state.timeTo
   };
@@ -128,7 +128,6 @@ function saveSpottingLog(){try{localStorage.setItem('aero-spotting-log',JSON.str
 function applyTarget(target){
   const f=target?.filter||{};
   state.targetId=target?.id||'';
-  state.direction=f.direction||'all';
   state.widebody=Boolean(f.widebody);
   state.special=Boolean(f.special);
   state.aircraftTypes=Array.isArray(f.aircraftTypes)?[...f.aircraftTypes]:[];
@@ -194,11 +193,9 @@ function render(){
   const aircraftTypes=[...new Set(state.flights.map(f=>aircraftDisplay(f).current).filter(x=>x&&x!=='未知机型'))].sort();
   const airlines=[...new Set(state.flights.map(airlineOf).filter(x=>x!=='未知航司'))].sort();
   const filtered=filterFlights(state.flights);
-  const directionless=filterFlights(state.flights,true);
-  const depCount=directionless.filter(f=>f.__direction==='dep').length;
-  const arrCount=directionless.filter(f=>f.__direction==='arr').length;
-  const plan=spottingPlan(filtered);
   const dep=filtered.filter(f=>f.__direction==='dep'), arr=filtered.filter(f=>f.__direction==='arr');
+  const depCount=dep.length, arrCount=arr.length;
+  const plan=spottingPlan(filtered);
   app.innerHTML=`
   <main>
     <header><div class="brand"><span class="logo">✈</span><div><h1>Aero</h1><p>看今天飞什么机</p></div></div><button class="refresh" id="refresh">↻</button></header>
@@ -208,10 +205,6 @@ function render(){
         <label class="field date"><span>日期</span><input id="date" type="date" value="${state.date}"></label>
       </div>
       <div class="chips">
-        <div class="direction-tabs" role="tablist" aria-label="航班方向">
-          <button class="${state.direction==="dep"?"on":""}" data-dir="dep">出发 <span>${depCount}</span></button>
-          <button class="${state.direction==="arr"?"on":""}" data-dir="arr">到达 <span>${arrCount}</span></button>
-        </div>
         <button class="chip wide ${state.widebody?"on":""}" id="wide">✦ 只看宽体</button>
         <button class="chip special ${state.special?"on":""}" id="special">🎨 只看彩绘</button>
         <button class="chip ${state.showCodeshare?"on":""}" id="codeshare">显示共享</button>
@@ -230,13 +223,11 @@ function render(){
     <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
     ${weatherCard()}
     ${targetCard()}
-    ${spottingOverview()}
-    ${spottingLogCard()}
-    ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
+    ${spottingOverview()}\n    ${spottingLogCard()}\n    <div class="flight-tabs" role="tablist" aria-label="航班列表">\n      <button class="${state.listDirection==="dep"?"on":""}" data-dir="dep">出发 <span>${depCount}</span></button>\n      <button class="${state.listDirection==="arr"?"on":""}" data-dir="arr">到达 <span>${arrCount}</span></button>\n    </div>\n    ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
     ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
 ${state.detailFlight ? detailModal(state.detailFlight) : ''}
-    <div class="flight-list">${state.direction!=='arr' ? section('出发',dep) : ''}${state.direction!=='dep' ? section('到达',arr) : ''}</div>
+    <div class="flight-list">${state.listDirection==='dep' ? section('出发',dep) : section('到达',arr)}</div>
     ${sourceFooter()}
     <footer>默认隐藏代码共享重复航班 · 3天观机计划跟随当前筛选条件</footer>
   </main>`;
@@ -258,7 +249,7 @@ function spottingOverview(){
       (x.wide?'<span>宽体 '+x.wide+'</span>':'')+(x.livery?'<span class="livery">🎨 彩绘 '+x.livery+'</span>':'')+
       '</div></div>').join('')+'</div>';
   }).join('');
-  return '<section class="spotting"><div class="spotting-head"><b>👀 3天观机计划</b><span>按 2 小时窗口汇总</span></div>'+days+'</section>';
+  return '<details class="spotting" '+(state.spottingOpen?'open':'')+'><summary class="spotting-head"><b>👀 3天观机计划</b><span>按 2 小时窗口汇总</span><i>⌄</i></summary><div class="spotting-body">'+days+'</div></details>';
 }
 function spottingPlan(list){
   const windows=[];
@@ -297,11 +288,12 @@ function bind(){
   document.querySelector('#codeshare').onclick=()=>{state.showCodeshare=!state.showCodeshare;render();};
   document.querySelectorAll('[data-airline]').forEach(b=>b.onclick=()=>{const a=b.dataset.airline;if(!a)state.selectedAirlines=[];else state.selectedAirlines=state.selectedAirlines.includes(a)?state.selectedAirlines.filter(x=>x!==a):[...state.selectedAirlines,a];render();});
   document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{const t=b.dataset.type;if(!t)state.aircraftTypes=[];else state.aircraftTypes=state.aircraftTypes.includes(t)?state.aircraftTypes.filter(x=>x!==t):[...state.aircraftTypes,t];render();});
-  document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
+  document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.listDirection=b.dataset.dir;render();});
+  document.querySelector('.spotting')?.addEventListener('toggle',e=>{state.spottingOpen=e.currentTarget.open;localStorage.setItem('aero-spotting-open',state.spottingOpen?'1':'0');});
   document.querySelector('#refresh').onclick=loadRange;
   document.querySelectorAll('.flight').forEach(el=>el.onclick=()=>{const id=el.dataset.flightId; const f=state.flights.find(x=>flightIdentity(x)===id); if(f) {state.detailFlight=f;render();}});
   document.querySelectorAll('[data-target]').forEach(b=>b.onclick=()=>{const id=b.dataset.target;const t=[...BUILTIN_TARGETS,...state.targets].find(x=>x.id===id);if(t)applyTarget(t);});
-  document.querySelector('#clearTarget')?.addEventListener('click',()=>{state.targetId='';state.direction='dep';state.widebody=false;state.special=false;state.aircraftTypes=[];state.selectedAirlines=[];state.q='';state.timeFrom='00:00';state.timeTo='23:59';render();});
+  document.querySelector('#clearTarget')?.addEventListener('click',()=>{state.targetId='';state.listDirection='dep';state.widebody=false;state.special=false;state.aircraftTypes=[];state.selectedAirlines=[];state.q='';state.timeFrom='00:00';state.timeTo='23:59';render();});
   document.querySelector('#saveTarget')?.addEventListener('click',()=>{
     const name=window.prompt('给这个观机目标起个名字','我的目标');
     if(!name?.trim()) return;
