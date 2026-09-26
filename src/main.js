@@ -19,6 +19,7 @@ const state = {
   direction: 'all',
   widebody: false,
   special: false,
+  aircraftTypes: [],
   airline: 'all',
   q: '',
   timeFrom: '00:00',
@@ -64,6 +65,7 @@ function render(){
     const special=Boolean(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery || f?.specialLivery || f?.aircraft?.livery);
     return (!state.widebody || isWide(type))
       && (!state.special || special)
+      && (!state.aircraftTypes.length || state.aircraftTypes.includes(type))
       && (state.airline==='all' || airline===state.airline)
       && (!state.q || (n+' '+airline+' '+type).toLowerCase().includes(state.q.toLowerCase()))
       && t >= state.timeFrom && t <= state.timeTo;
@@ -83,6 +85,7 @@ function render(){
         <button class="chip ${state.direction==='arr'?'on':''}" data-dir="arr">到达</button>
         <button class="chip wide ${state.widebody?'on':''}" id="wide">✦ 只看宽体</button>
         <button class="chip special ${state.special?'on':''}" id="special">🎨 只看彩绘</button>
+        <div class="aircraft-filter"><span>机型</span><button class="mini ${!state.aircraftTypes.length?'on':''}" data-type="">全部</button>${aircraftTypes.map(t=>`<button class="mini ${state.aircraftTypes.includes(t)?'on':''}" data-type="${esc(t)}">${esc(t)}</button>`).join('')}</div>
       </div>
       <div class="row">
         <label class="field grow"><span>航司</span><select id="airline"><option value="all">全部航司</option>${airlines.map(a=>`<option value="${esc(a)}" ${a===state.airline?'selected':''}>${esc(a)}</option>`).join('')}</select></label>
@@ -125,6 +128,7 @@ function bind(){
   document.querySelector('#timeTo').onchange=e=>{state.timeTo=e.target.value;render();};
   document.querySelector('#wide').onclick=()=>{state.widebody=!state.widebody;render();};
   document.querySelector('#special').onclick=()=>{state.special=!state.special;render();};
+  document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{const t=b.dataset.type;if(!t)state.aircraftTypes=[];else state.aircraftTypes=state.aircraftTypes.includes(t)?state.aircraftTypes.filter(x=>x!==t):[...state.aircraftTypes,t];render();});
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
   document.querySelector('#refresh').onclick=load;
 }
