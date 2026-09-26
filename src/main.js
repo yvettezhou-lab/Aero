@@ -349,7 +349,22 @@ async function fetchDay(date,force=false){
   const key=`aero:${state.airport}:${date}:${state.showCodeshare}`;
   try{
     const cached=JSON.parse(localStorage.getItem(key)||'null');
-    if(!force && cached?.savedAt){const flights=cached.flights||[];flights.__fetchedAt=cached.fetchedAt||'';flights.__secondSource=cached.secondSource||null;return flights;}
+    if(!force && cached?.savedAt){
+      const flights=(cached.flights||[]).map(f=>{
+        const override=aircraftOverrideFor(state.airport,date,f.__direction,numberOf(f));
+        if(!override) return f;
+        return {
+          ...f,
+          aircraft:{...(f.aircraft||{}),model:override.model,reg:override.registration},
+          registration:override.registration,
+          __aircraftOverride:true,
+          __aircraftOverrideSource:override.source
+        };
+      });
+      flights.__fetchedAt=cached.fetchedAt||'';
+      flights.__secondSource=cached.secondSource||null;
+      return flights;
+    }
   }catch{}
   const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(date)}&showCodeshare=${state.showCodeshare}`);
   const data=await r.json();
