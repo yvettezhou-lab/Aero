@@ -23,6 +23,8 @@
 在 Vercel 项目环境变量中设置：
 `AERODATABOX_API_KEY`
 
+可选第二数据源：`FLIGHTAWARE_API_KEY`。配置后 Aero 会对未来航班按航班号做交叉确认；第二源不可用时自动退回 AeroDataBox，不影响主流程。
+
 API Key 不放进前端，由 `/api/flights` 服务端代理请求。
 
 ## 观机计划
@@ -42,7 +44,7 @@ npm run dev
 
 Aero 的航班数据层采用多源可替换设计：
 - 主源：AeroDataBox（机场 FIDS、未来/历史航班时刻、航班状态）
-- 交叉验证：FlightAware AeroAPI / Cirium FlightStats（按可用 API Key 启用）
+- 交叉验证：FlightAware AeroAPI（按可用 API Key 启用）；后续可继续增加 Cirium 等源
 - 同一航班按 operating flight / flight identity 去重，避免 codeshare 重复
 - 机型分为计划机型与最新/实际机型；两者冲突时显示“机型存在差异”
 - 宽体筛选基于标准机型族，而不是简单按航班号猜测
