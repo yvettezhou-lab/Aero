@@ -313,12 +313,12 @@ function spottingOverview(){
       '<time>'+esc(timeOf(f))+'</time>'+
       '<div class="spot-flight-main"><b>'+esc(numberOf(f))+'</b><span>'+esc(airlineOf(f))+'</span></div>'+
       '<div class="spot-flight-route">'+esc(route)+'</div>'+
-      '<div class="spot-flight-aircraft"><b>'+esc(info.current)+'</b>'+operationHint+(wide?'<small>Widebody</small>':'')+(l?'<small class="livery">🎨 '+esc(l.rarity)+'</small>':'')+'</div>'+
+      '<div class="spot-flight-aircraft"><b>'+esc(info.current)+'</b>'+operationHint+(l?'<small class="livery">🎨 '+esc(l.rarity)+'</small>':'')+'</div>'+
       (info.registration?'<small class="spot-reg">'+esc(info.registration)+'</small>':'')+
       '<div class="spot-confirm">'+confirmButton(f,d.iso)+'</div>'+
       '</div>';
   }).join('');
-  return '<section class="spotting"><div class="spotting-head"><b>👀 Spotting Plan</b><span>'+esc(d.label)+' · '+esc(d.iso.slice(5).replace('-','/'))+' · '+list.length+' aircraft</span></div><div class="spotting-body" data-current-index="'+currentIndex+'">'+html+'</div></section>';
+  return '<section class="spotting"><div class="spotting-head"><b>👀 Spotting Plan</b><span>'+esc(d.label)+' · '+esc(d.iso.slice(5).replace('-','/'))+' · '+list.length+' targets</span></div><div class="spotting-body" data-current-index="'+currentIndex+'">'+html+'</div></section>';
 }
 function confirmedList(){
   const d=dayLabel(state.activeDay), rows=confirmedListFor(d.iso).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
