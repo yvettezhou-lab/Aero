@@ -86,7 +86,7 @@ function render(){
     return (!state.widebody || isWide(type))
       && (!state.special || special)
       && (!state.aircraftTypes.length || state.aircraftTypes.includes(type))
-      && (state.airline==='all' || airline===state.airline)
+      && (!state.selectedAirlines.length || state.selectedAirlines.includes(airline))
       && (!state.q || (n+' '+airline+' '+type).toLowerCase().includes(state.q.toLowerCase()))
       && t >= state.timeFrom && t <= state.timeTo;
   });
@@ -111,7 +111,6 @@ function render(){
         <div class="aircraft-filter"><span>航司</span><button class="mini ${!state.selectedAirlines.length?'on':''}" data-airline="">全部</button>${airlines.map(a=>`<button class="mini ${state.selectedAirlines.includes(a)?'on':''}" data-airline="${esc(a)}">${esc(a)}</button>`).join('')}</div>
       </div>
       <div class="row">
-        <label class="field grow"><span>航司</span><select id="airline"><option value="all">全部航司</option>${airlines.map(a=>`<option value="${esc(a)}" ${a===state.airline?'selected':''}>${esc(a)}</option>`).join('')}</select></label>
         <label class="field grow"><span>搜索</span><input id="q" placeholder="航班号 / 机型" value="${esc(state.q)}"></label>
       </div>
       <div class="row time-row">
@@ -158,7 +157,6 @@ function bind(){
   document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.day);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
   document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.baseDate=localISO();state.date=state.baseDate;state.dayFlights={};loadRange();};
   document.querySelector('#date').onchange=e=>{state.baseDate=e.target.value;state.date=state.baseDate;state.activeDay=0;state.dayFlights={};loadRange();};
-  document.querySelector('#airline').onchange=e=>{state.airline=e.target.value;render();};
   document.querySelector('#q').oninput=e=>{state.q=e.target.value;render();};
   document.querySelector('#timeFrom').onchange=e=>{state.timeFrom=e.target.value;render();};
   document.querySelector('#timeTo').onchange=e=>{state.timeTo=e.target.value;render();};
