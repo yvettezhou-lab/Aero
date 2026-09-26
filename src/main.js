@@ -258,10 +258,16 @@ function spottingOverview(){
   const d=dayLabel(state.activeDay);
   const list=filterFlights(state.dayFlights[d.iso]||[]);
   if(!list.length) return '';
-  const rows=[...list].sort((a,b)=>timeOf(a).localeCompare(timeOf(b))).map(f=>{
-    const info=aircraftDisplay(f);
-    const wide=isWide(info.current);
-    const l=liveryOf(f);
+  const rows=[...list].sort((a,b)=>timeOf(a).localeCompare(timeOf(b)));
+  let currentIndex=0;
+  if(state.activeDay===0 && d.iso===localISO()){
+    const now=new Date();
+    const nowTime=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    const next=rows.findIndex(f=>timeOf(f)>=nowTime);
+    currentIndex=next>=0?next:rows.length;
+  }
+  const html=rows.map((f,index)=>{
+    const info=aircraftDisplay(f),wide=isWide(info.current),l=liveryOf(f);
     const route=f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure');
     return '<div class="spot-flight">'+
       '<time>'+esc(timeOf(f))+'</time>'+
@@ -271,7 +277,7 @@ function spottingOverview(){
       (info.registration?'<small class="spot-reg">'+esc(info.registration)+'</small>':'')+
       '</div>';
   }).join('');
-  return '<section class="spotting"><div class="spotting-head"><b>👀 观机计划</b><span>'+esc(d.label)+' · '+esc(d.iso.slice(5).replace('-','/'))+' · '+list.length+' 架</span></div><div class="spotting-body">'+rows+'</div></section>';
+  return '<section class="spotting"><div class="spotting-head"><b>👀 观机计划</b><span>'+esc(d.label)+' · '+esc(d.iso.slice(5).replace('-','/'))+' · '+list.length+' 架</span></div><div class="spotting-body" data-current-index="'+currentIndex+'">'+html+'</div></section>';
 }
 function spottingPlan(list){
   const windows=[];
@@ -317,6 +323,11 @@ function bind(){
   document.querySelector('#airlineSelect').onchange=e=>{state.selectedAirlines=e.target.value?[e.target.value]:[];render();};
   document.querySelector('#aircraftSelect').onchange=e=>{state.aircraftTypes=e.target.value?[e.target.value]:[];render();};
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.listDirection=b.dataset.dir;render();});
+  const spottingBody=document.querySelector('.spotting-body');
+  if(spottingBody){
+    const idx=Number(spottingBody.dataset.currentIndex||0);
+    requestAnimationFrame(()=>{if(idx>0) spottingBody.scrollTop=Math.max(0,idx*76);});
+  }
   document.querySelector('.spotting')?.addEventListener('toggle',e=>{state.spottingOpen=e.currentTarget.open;localStorage.setItem('aero-spotting-open',state.spottingOpen?'1':'0');});
   document.querySelector('#refresh').onclick=loadRange;
   document.querySelectorAll('.flight').forEach(el=>el.onclick=()=>{const id=el.dataset.flightId; const f=state.flights.find(x=>flightIdentity(x)===id); if(f) {state.detailFlight=f;render();}});
