@@ -188,6 +188,34 @@ function sourceFooter(){
 function airportMeta(){const a=AIRPORTS.find(x=>x[0]===state.airport);return a?{name:a[1],lat:a[3],lon:a[4]}:null;}
 function weatherText(c){const m={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Drizzle',53:'Drizzle',55:'Drizzle',61:'Light rain',63:'Moderate rain',65:'Heavy rain',80:'Showers',81:'Showers',82:'Heavy showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};return m[c]||'Changing weather';}
 function weatherIcon(c){if(c===0)return '☀️';if([1,2].includes(c))return '🌤️';if(c===3)return '☁️';if([45,48].includes(c))return '🌫️';if([51,53,55,61,63,65,80,81,82].includes(c))return '🌧️';if([95,96,99].includes(c))return '⛈️';return '🌤️';}
+const RUNWAY_AXES={
+  KMG:[{label:'03/21',headings:[39,219]},{label:'04R/22L',headings:[39,219]}]
+};
+function compass(deg){
+  if(!Number.isFinite(deg)) return '—';
+  return ['N','NE','E','SE','S','SW','W','NW'][Math.round(deg/45)%8];
+}
+function normalizeDeg(deg){return ((deg%360)+360)%360;}
+function likelyRunway(airport,windFrom){
+  const axes=RUNWAY_AXES[airport];
+  if(!axes||!Number.isFinite(windFrom)) return null;
+  const landingHeading=normalizeDeg(windFrom+180);
+  const best=axes.reduce((acc,axis)=>{
+    const h=axis.headings.reduce((bestHeading,h)=>{
+      const diff=Math.abs(normalizeDeg(landingHeading-h));
+      const circular=Math.min(diff,360-diff);
+      return circular<bestHeading.diff?{h,diff:circular}:{...bestHeading};
+    },{h:axis.headings[0],diff:Infinity});
+    return h.diff<acc.diff?{axis,h:h.h,diff:h.diff}:{...acc};
+  },{axis:null,h:0,diff:Infinity});
+  if(!best.axis||best.diff>35) return null;
+  const runway=best.h<100?'04 / 03':'22 / 21';
+  return {landingHeading:best.h,approach:compass(best.h+180),runway};
+}
+function windAt(h,i){
+  const speed=Number(h.wind_speed_10m?.[i]), direction=Number(h.wind_direction_10m?.[i]);
+  return {speed,direction};
+}
 function weatherSummary(date){const h=state.weather?.hourly;if(!h?.time)return null;const rows=h.time.map((t,i)=>({t,i})).filter(x=>x.t.startsWith(date)&&+x.t.slice(11,13)>=6&&+x.t.slice(11,13)<22);if(!rows.length)return null;const nums=k=>rows.map(x=>Number(h[k]?.[x.i])).filter(Number.isFinite);const rp=nums('precipitation_probability'),vis=nums('visibility'),wind=nums('wind_speed_10m');const maxRain=rp.length?Math.max(...rp):0,minVis=vis.length?Math.min(...vis):null,maxWind=wind.length?Math.max(...wind):null;let level='Good';if(maxRain>50||(minVis!=null&&minVis<5000)||(maxWind!=null&&maxWind>35))level='Watch conditions';if(maxRain>75||(minVis!=null&&minVis<3000)||(maxWind!=null&&maxWind>50))level='Not ideal';const good=rows.filter(x=>Number(h.precipitation_probability?.[x.i]??0)<=30&&Number(h.visibility?.[x.i]??99999)>=8000&&Number(h.wind_speed_10m?.[x.i]??0)<=30).map(x=>x.t.slice(11,16)).slice(0,4);return{level,maxRain,minVis,maxWind,good};}
 function weatherCard(){
   if(state.weatherLoading)return '<div class="weather-compact"><b>🌤 Weather</b><span>Loading…</span></div>';
@@ -195,8 +223,10 @@ function weatherCard(){
   const h=state.weather?.hourly;if(!h?.time)return '';
   let ni=0,best=Infinity,target=new Date(state.date+'T12:00:00').getTime();
   h.time.forEach((t,i)=>{const d=Math.abs(new Date(t).getTime()-target);if(d<best){best=d;ni=i;}});
-  const code=Number(h.weather_code?.[ni]),vis=Number(h.visibility?.[ni]),wind=Number(h.wind_speed_10m?.[ni]),cloud=Number(h.cloud_cover_low?.[ni]),s=weatherSummary(state.date);
-  return '<div class="weather-compact"><b>🌤 '+esc(airportName(state.airport))+'</b><span>'+weatherIcon(code)+' '+weatherText(code)+'</span><em>Visibility '+(Number.isFinite(vis)?Math.round(vis/100)/10+'km':'—')+'</em><em>Wind '+(Number.isFinite(wind)?Math.round(wind):'—')+'km/h</em><em>Low cloud '+(Number.isFinite(cloud)?Math.round(cloud):'—')+'%</em><em>Rain '+(s?s.maxRain:'—')+'%</em></div>';
+  const code=Number(h.weather_code?.[ni]),vis=Number(h.visibility?.[ni]),cloud=Number(h.cloud_cover_low?.[ni]),s=weatherSummary(state.date),w=windAt(h,ni),runway=likelyRunway(state.airport,w.direction);
+  const windLabel=Number.isFinite(w.speed)?'Wind '+compass(w.direction)+' '+(Number.isFinite(w.direction)?Math.round(w.direction)+'° ':'')+Math.round(w.speed)+'km/h':'Wind —';
+  const runwayLabel=runway?'Likely approach '+esc(runway.approach)+' · RWY '+esc(runway.runway):'';
+  return '<div class="weather-compact"><b>🌤 '+esc(airportName(state.airport))+'</b><span>'+weatherIcon(code)+' '+weatherText(code)+'</span><em>Visibility '+(Number.isFinite(vis)?Math.round(vis/100)/10+'km':'—')+'</em><em>'+windLabel+'</em><em>Low cloud '+(Number.isFinite(cloud)?Math.round(cloud):'—')+'%</em><em>Rain '+(s?s.maxRain:'—')+'%</em>'+(runwayLabel?'<strong class="wind-plan">'+runwayLabel+'</strong>':'')+'</div>';
 }
 function dayTabs(){return [0,1,2].map(i=>{const d=dayLabel(i);return '<button class="day '+(i===state.activeDay?'on':'')+'" data-day="'+i+'"><b>'+d.label+'</b></button>';}).join('');}
 function dayLabel(offset){
@@ -276,11 +306,14 @@ function spottingOverview(){
   const html=rows.map((f,index)=>{
     const info=aircraftDisplay(f),wide=isWide(info.current),l=liveryOf(f);
     const route=f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure');
+    const planWind=state.weather?.hourly?windAt(state.weather.hourly,Math.max(0,state.weather.hourly.time?.findIndex(t=>t.startsWith(d.iso)&&t.slice(11,13)===timeOf(f).slice(0,2)))):{speed:NaN,direction:NaN};
+    const runway=likelyRunway(state.airport,planWind.direction);
+    const operationHint=runway?'<small class="spot-approach">'+(f.__direction==='arr'?'Approach ':'Departure ')+esc(runway.approach)+' · RWY '+esc(runway.runway)+'</small>':'';
     return '<div class="spot-flight">'+
       '<time>'+esc(timeOf(f))+'</time>'+
       '<div class="spot-flight-main"><b>'+esc(numberOf(f))+'</b><span>'+esc(airlineOf(f))+'</span></div>'+
       '<div class="spot-flight-route">'+esc(route)+'</div>'+
-      '<div class="spot-flight-aircraft"><b>'+esc(info.current)+'</b>'+(wide?'<small>Widebody</small>':'')+(l?'<small class="livery">🎨 '+esc(l.rarity)+'</small>':'')+'</div>'+
+      '<div class="spot-flight-aircraft"><b>'+esc(info.current)+'</b>'+operationHint+(wide?'<small>Widebody</small>':'')+(l?'<small class="livery">🎨 '+esc(l.rarity)+'</small>':'')+'</div>'+
       (info.registration?'<small class="spot-reg">'+esc(info.registration)+'</small>':'')+
       '<div class="spot-confirm">'+confirmButton(f,d.iso)+'</div>'+
       '</div>';
