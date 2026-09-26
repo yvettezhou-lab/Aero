@@ -58,7 +58,13 @@ export default async function handler(req,res){
         const boxMap=new Map([...departures,...arrivals].map(x=>[byKey(x),x]));
         for(const x of [...fd2,...fa2]){
           const hit=boxMap.get(byKey(x));
-          if(hit){hit.__sources=[...(hit.__sources||[]),'FlightAware'];}
+          if(hit){
+          hit.__sources=[...(hit.__sources||[]),'FlightAware'];
+          hit.__flightAware={aircraftType:x.aircraft?.model||x.aircraft?.type||x.aircraft?.icao||'',registration:x.aircraft?.reg||x.aircraft?.registration||''};
+          const boxType=hit.aircraft?.model||hit.aircraft?.type||hit.aircraft?.icao||'';
+          const faType=hit.__flightAware.aircraftType;
+          if(boxType && faType && boxType.toUpperCase()!==faType.toUpperCase()) hit.__aircraftConflict=true;
+        }
         }
         secondSource={enabled:true,ok:true,matched:fd2.length+fa2.length};
       }catch(e){secondSource={enabled:true,ok:false,error:e.message};}
