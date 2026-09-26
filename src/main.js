@@ -329,7 +329,7 @@ function bind(){
     requestAnimationFrame(()=>{if(idx>0) spottingBody.scrollTop=Math.max(0,idx*76);});
   }
   document.querySelector('.spotting')?.addEventListener('toggle',e=>{state.spottingOpen=e.currentTarget.open;localStorage.setItem('aero-spotting-open',state.spottingOpen?'1':'0');});
-  document.querySelector('#refresh').onclick=loadRange;
+  document.querySelector('#refresh').onclick=()=>loadRange(true);
   document.querySelectorAll('.flight').forEach(el=>el.onclick=()=>{const id=el.dataset.flightId; const f=state.flights.find(x=>flightIdentity(x)===id); if(f) {state.detailFlight=f;render();}});
   document.querySelectorAll('[data-target]').forEach(b=>b.onclick=()=>{const id=b.dataset.target;const t=[...BUILTIN_TARGETS,...state.targets].find(x=>x.id===id);if(t)applyTarget(t);});
   document.querySelector('#clearTarget')?.addEventListener('click',()=>{state.targetId='';state.listDirection='dep';state.widebody=false;state.special=false;state.aircraftTypes=[];state.selectedAirlines=[];state.q='';state.timeFrom='00:00';state.timeTo='23:59';render();});
@@ -344,11 +344,11 @@ function bind(){
   document.querySelector('#closeModal')?.addEventListener('click',()=>{state.detailFlight=null;render();});
   document.querySelector('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'){state.detailFlight=null;render();}});
 }
-async function fetchDay(date){
+async function fetchDay(date,force=false){
   const key=`aero:${state.airport}:${date}:${state.showCodeshare}`;
   try{
     const cached=JSON.parse(localStorage.getItem(key)||'null');
-    if(cached?.savedAt && Date.now()-cached.savedAt<10*60*1000){const flights=cached.flights||[];flights.__fetchedAt=cached.fetchedAt||'';flights.__secondSource=cached.secondSource||null;return flights;}
+    if(!force && cached?.savedAt){const flights=cached.flights||[];flights.__fetchedAt=cached.fetchedAt||'';flights.__secondSource=cached.secondSource||null;return flights;}
   }catch{}
   const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(date)}&showCodeshare=${state.showCodeshare}`);
   const data=await r.json();
@@ -362,10 +362,10 @@ async function fetchDay(date){
   try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights, fetchedAt:data.fetchedAt||'',secondSource:data.secondSource||null}));}catch{}
   return flights;
 }
-async function loadRange(){
+async function loadRange(force=false){
   state.loading=true; state.error=''; render();
   const dates=[0,1,2].map(i=>dayLabel(i).iso);
-  const results=await Promise.allSettled(dates.map(fetchDay));
+  const results=await Promise.allSettled(dates.map(date=>fetchDay(date,force)));
   results.forEach((r,i)=>{
     if(r.status==='fulfilled'){
       state.dayFlights[dates[i]]=r.value;
