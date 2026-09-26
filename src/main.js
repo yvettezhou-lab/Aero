@@ -2,12 +2,12 @@ import './style.css';
 import { liveryForRegistration } from './data/liveries.js';
 
 const AIRPORTS = [
-  ['KMG','昆明长水','Kunming'],['PEK','北京首都','Beijing'],['PKX','北京大兴','Beijing'],
-  ['PVG','上海浦东','Shanghai'],['SHA','上海虹桥','Shanghai'],['CAN','广州白云','Guangzhou'],
-  ['SZX','深圳宝安','Shenzhen'],['TFU','成都天府','Chengdu'],
-  ['HKG','香港','Hong Kong'],['SIN','新加坡樟宜','Singapore'],['BKK','曼谷素万那普','Bangkok'],
-  ['KUL','吉隆坡','Kuala Lumpur'],['NRT','东京成田','Tokyo'],['HND','东京羽田','Tokyo'],
-  ['ICN','首尔仁川','Seoul'],['TPE','台北桃园','Taipei'],['MNL','马尼拉','Manila']
+  ['KMG','昆明长水','Kunming',24.9924,102.7435],['PEK','北京首都','Beijing',40.0799,116.6031],['PKX','北京大兴','Beijing',39.5098,116.4105],
+  ['PVG','上海浦东','Shanghai',31.1443,121.8083],['SHA','上海虹桥','Shanghai',31.1979,121.3363],['CAN','广州白云','Guangzhou',23.3924,113.2988],
+  ['SZX','深圳宝安','Shenzhen',22.6393,113.8107],['TFU','成都天府','Chengdu',30.3125,104.4419],
+  ['HKG','香港','Hong Kong',22.3080,113.9185],['SIN','新加坡樟宜','Singapore',1.3644,103.9915],['BKK','曼谷素万那普','Bangkok',13.6900,100.7501],
+  ['KUL','吉隆坡','Kuala Lumpur',2.7456,101.7099],['NRT','东京成田','Tokyo',35.7720,140.3929],['HND','东京羽田','Tokyo',35.5494,139.7798],
+  ['ICN','首尔仁川','Seoul',37.4602,126.4407],['TPE','台北桃园','Taipei',25.0797,121.2342],['MNL','马尼拉','Manila',14.5086,121.0197]
 ];
 
 const WIDEBODY = /\b(A300|A310|A330|A340|A350|A380|B747|B767|B77[0-9]|B78[0-9]|DC10|MD11|IL96|L1011)\b/i;
@@ -32,7 +32,10 @@ const state = {
   sourceMeta: {},
   detailFlight: null,
   loading: false,
-  error: ''
+  error: '',
+  weather: null,
+  weatherLoading: false,
+  weatherError: ''
 };
 
 const app = document.querySelector('#app');
@@ -108,6 +111,11 @@ function sourceFooter(){
   if(meta?.enabled) second=meta.ok?'FlightAware ✓ 交叉确认':'FlightAware ⚠ 未成功连接';
   return '<div class="source-bar"><span>AeroDataBox ✓</span><span>'+second+'</span></div>';
 }
+function airportMeta(){const a=AIRPORTS.find(x=>x[0]===state.airport);return a?{name:a[1],lat:a[3],lon:a[4]}:null;}
+function weatherText(c){return ({0:'晴',1:'大部晴朗',2:'局部多云',3:'阴',45:'雾',48:'雾',51:'毛毛雨',53:'毛毛雨',55:'毛毛雨',61:'小雨',63:'中雨',65:'大雨',80:'阵雨',81:'阵雨',82:'强阵雨',95:'雷雨',96:'雷雨',99:'雷雨'})[c]||'天气变化';}
+function weatherIcon(c){if(c===0)return '☀️';if([1,2].includes(c))return '🌤️';if(c===3)return '☁️';if([45,48].includes(c))return '🌫️';if([51,53,55,61,63,65,80,81,82].includes(c))return '🌧️';if([95,96,99].includes(c))return '⛈️';return '🌤️';}
+function weatherSummary(date){const h=state.weather?.hourly;if(!h?.time)return null;const rows=h.time.map((t,i)=>({t,i})).filter(x=>x.t.startsWith(date)&&+x.t.slice(11,13)>=6&&+x.t.slice(11,13)<22);if(!rows.length)return null;const nums=k=>rows.map(x=>Number(h[k]?.[x.i])).filter(Number.isFinite);const rp=nums('precipitation_probability'),vis=nums('visibility'),wind=nums('wind_speed_10m');const maxRain=rp.length?Math.max(...rp):0,minVis=vis.length?Math.min(...vis):null,maxWind=wind.length?Math.max(...wind):null;let level='适合';if(maxRain>50||(minVis!=null&&minVis<5000)||(maxWind!=null&&maxWind>35))level='需留意';if(maxRain>75||(minVis!=null&&minVis<3000)||(maxWind!=null&&maxWind>50))level='不理想';const good=rows.filter(x=>Number(h.precipitation_probability?.[x.i]??0)<=30&&Number(h.visibility?.[x.i]??99999)>=8000&&Number(h.wind_speed_10m?.[x.i]??0)<=30).map(x=>x.t.slice(11,16)).slice(0,4);return{level,maxRain,minVis,maxWind,good};}
+function weatherCard(){if(state.weatherLoading) return '<section class="weather-card"><div class="weather-head"><b>🌤 观机天气</n><span>读哖夺〦</span></div></section>';if(state.weatherError) return '<section class="weather-card"><div class="weather-head"><b>🌤 观机天气</b><span>妠不人</span></div></section>';const h=state.weather?.hourly;if(!h?.time) return '';let ni=0,best=Infinity,now=Date.now();h.time.forEach((t,i)=>{const d=Math.abs(new Date(t).getTime()-now);if(d<best){best=d;ni=i;}});const code=Number(h.weather_code?.[ni]),vis=Number(h.visibility?.[ni]),wind=Number(h.wind_speed_10m?.[ni]),gust=Number(h.wind_gusts_10m?.[ni]),cloud=Number(h.cloud_cover?.[ni]),s=weatherSummary(state.date);const tabs=[0,1,2].map(i=>{const d=dayLabel(i),x=weatherSummary(d.iso);return x?'<button class="weather-day '+(d.iso===state.date?'on':'')+'" data-weather-day="'+i+'"><b>'+d.label+'</b><span>'+x.level+'</span><small>'+x.maxRain+'%雨</small></button>':'';}).join('');return '<section class="weather-card"><div class="weather-head"><b>🌤 观机天气 · '+esc(airportName(state.airport))+'</b><span>'+weatherIcon(code)+' '+weatherText(code)+'</span></div><div class="weather-now"><div><strong>'+(Number.isFinite(vis)?Math.round(vis/100)/10+' km':'—')+'</strong><small>能见度</small></div><div><strong>'+(Number.isFinite(wind)?Math.round(wind):'—')+' km/h</strong><small>风速'+(Number.isFinite(gust)?' · 阵风 '+Math.round(gust):'')+'</small></div><div><strong>'+(Number.isFinite(cloud)?Math.round(cloud):'—')+'%</strong><small>云量</small><div><strong>'+(s?s.maxRain:'—')+'%</strong><small>06–22最高降雨概率</small></div></div><div class="weather-days">'+tabs+'</div>'+(s?'<div class="weather-plan"><b>'+s.level+'</b><span>06:00–22:00 · 最低能见度 '+(s.minVis!=null?Math.round(s.minVis/st):'')+'</span></div>':'')+'</div></section>';}
 function dayLabel(offset){
   const d=new Date(state.baseDate+'T12:00:00'); d.setDate(d.getDate()+offset);
   const iso=d.toISOString().slice(0,10);
@@ -148,6 +156,7 @@ function render(){
     </section>
     <div class="days">${[0,1,2].map(i=>{const d=dayLabel(i);return `<button class="day ${i===state.activeDay?'on':''}" data-day="${i}"><b>${d.label}</b><span>${d.iso.slice(5).replace('-','/')} 周${d.wd}</span></button>`}).join('')}</div>
     <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
+    ${weatherCard()}
     ${spottingOverview()}
     ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
@@ -203,8 +212,9 @@ function section(title,list){
 }
 function bind(){
   document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.day);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
-  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.baseDate=localISO();state.date=state.baseDate;state.dayFlights={};state.sourceMeta={};loadRange();};
-  document.querySelector('#date').onchange=e=>{state.baseDate=e.target.value;state.date=state.baseDate;state.activeDay=0;state.dayFlights={};state.sourceMeta={};loadRange();};
+  document.querySelectorAll('[data-weather-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.weatherDay);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
+  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.baseDate=localISO();state.date=state.baseDate;state.dayFlights={};state.sourceMeta={};loadRange();loadWeather();};
+  document.querySelector('#date').onchange=e=>{state.baseDate=e.target.value;state.date=state.baseDate;state.activeDay=0;state.dayFlights={};state.sourceMeta={};loadRange();loadWeather();};
   document.querySelector('#q').oninput=e=>{state.q=e.target.value;render();};
   document.querySelector('#timeFrom').onchange=e=>{state.timeFrom=e.target.value;render();};
   document.querySelector('#timeTo').onchange=e=>{state.timeTo=e.target.value;render();};
@@ -253,6 +263,26 @@ async function loadRange(){
   else if(failed) state.error='部分日期暂时无法更新，已显示成功读取的数据。';
   state.loading=false;render();
 }
+async function loadWeather(){
+  const meta=airportMeta();
+  if(!meta) return;
+  state.weatherLoading=true; state.weatherError=''; render();
+  const end=new Date(state.baseDate+'T12:00:00'); end.setDate(end.getDate()+2);
+  const endISO=end.toISOString().slice(0,10);
+  const key='aero-weather:'+state.airport+':'+state.baseDate;
+  try{
+    const cached=JSON.parse(localStorage.getItem(key)||'null');
+    if(cached?.savedAt && Date.now()-cached.savedAt<10*60*1000){state.weather=cached.data;state.weatherLoading=false;render();return;}
+  }catch{}
+  try{
+    const r=await fetch('/api/weather?lat='+encodeURIComponent(meta.lat)+'&lon='+encodeURIComponent(meta.lon)+'&start='+encodeURIComponent(state.baseDate)+'&end='+encodeURIComponent(endISO));
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.error||'天气读取失败');
+    state.weather=data;
+    try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),data}));}catch{}
+  }catch(e){state.weather=null;state.weatherError='天气暂时无法读取';}
+  finally{state.weatherLoading=false;render();}
+}
 async function load(){
   state.loading=true; state.error=''; render();
   try{
@@ -263,4 +293,4 @@ async function load(){
     state.error=e.message.includes('API')?e.message:'暂时无法读取航班数据。请检查 API 配置。';
   }finally{state.loading=false;render();}
 }
-render(); loadRange();
+render(); loadRange(); loadWeather();
