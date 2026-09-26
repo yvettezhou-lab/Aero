@@ -15,6 +15,36 @@ export const LIVERIES = {
     airline: "青岛航空",
     source: "Planespotters / JetPhotos"
   },
+  "B-6141": {
+    name: "云南孔雀（橙色）",
+    rarity: "少见",
+    airline: "中国东方航空",
+    source: "Planespotters aircraft record"
+  },
+  "B-5276": {
+    name: "云南孔雀（橙色）",
+    rarity: "少见",
+    airline: "中国东方航空",
+    source: "Planespotters aircraft record"
+  },
+  "B-657X": {
+    name: "广汽传祺",
+    rarity: "稀有",
+    airline: "中国南方航空",
+    source: "Planespotters photo record"
+  },
+  "B-658W": {
+    name: "第十五届全运会·活力湾区",
+    rarity: "稀有",
+    airline: "中国南方航空",
+    source: "Planespotters production record"
+  },
+  "B-7882": {
+    name: "中国国家博物馆",
+    rarity: "稀有",
+    airline: "中国东方航空",
+    source: "Planespotters photo record"
+  },
   "B-9923": {
     name: "WiFi包",
     rarity: "稀有",
