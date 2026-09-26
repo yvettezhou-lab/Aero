@@ -359,21 +359,33 @@ function section(title,list){
 function openConfirm(f,date=state.date){
   const existing=confirmationFor(f,date)||{};
   const sources=existing.sources||{fr24:true,variflight:true,umetrip:true};
-  const anyUnchecked=!(sources.fr24&&sources.variflight&&sources.umetrip);
-  const manualClass=anyUnchecked?'':' hidden';
-  const modal='<div class="modal-backdrop" id="confirmModal"><div class="modal confirm-modal"><button class="modal-close" id="confirmCancel">×</button><h2>Confirm Aircraft</h2><div class="confirm-flight"><b>'+esc(numberOf(f))+'</b><span>'+esc(airlineOf(f))+' · '+esc(timeOf(f))+' · '+esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))+'</span></div><div class="confirm-sources"><b>Sources checked</b><label><input type="checkbox" id="srcFr24" '+(sources.fr24!==false?'checked':'')+'> FR24</label><label><input type="checkbox" id="srcVariFlight" '+(sources.variflight!==false?'checked':'')+'> VariFlight</label><label><input type="checkbox" id="srcUmetrip" '+(sources.umetrip!==false?'checked':'')+'> Umetrip</label></div><div id="manualConfirmFields" class="manual-confirm-fields'+manualClass+'"><label class="confirm-field"><span>Actual aircraft</span><input id="actualAircraft" placeholder="e.g. Boeing 737-8 MAX" value="'+esc(existing.actualAircraft||'')+'"></label><label class="confirm-field"><span>Registration</span><input id="actualRegistration" placeholder="e.g. B-1380" value="'+esc(existing.registration||'')+'"></label><label class="confirm-field"><span>Actual flight number (if different)</span><input id="actualFlightNumber" placeholder="e.g. MU5821" value="'+esc(existing.actualFlightNumber||'')+'"></label></div><div class="confirm-actions"><button id="saveConfirmation">✓ Confirm</button>'+(existing.confirmed?'<button id="removeConfirmation" class="secondary">Remove</button>':'')+'</div><p class="confirm-note">Aero uses the cached flight plan. This step does not request new flight data.</p></div></div>';
+  const modal='<div class="modal-backdrop" id="confirmModal"><div class="modal confirm-modal"><button class="modal-close" id="confirmCancel">×</button><h2>Confirm Aircraft</h2><div class="confirm-flight"><b>'+esc(numberOf(f))+'</b><span>'+esc(airlineOf(f))+' · '+esc(timeOf(f))+' · '+esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))+'</span></div><div class="confirm-sources"><b>Sources checked</b><label><input type="checkbox" id="srcFr24" '+(sources.fr24!==false?'checked':'')+'> FR24</label><label><input type="checkbox" id="srcVariFlight" '+(sources.variflight!==false?'checked':'')+'> VariFlight</label><label><input type="checkbox" id="srcUmetrip" '+(sources.umetrip!==false?'checked':'')+'> Umetrip</label></div><div id="manualConfirmFields" class="manual-confirm-fields hidden"><label class="confirm-field"><span>Actual aircraft <em>(optional)</em></span><input id="actualAircraft" placeholder="e.g. Boeing 737-8 MAX" value="'+esc(existing.actualAircraft||'')+'"></label><label class="confirm-field"><span>Registration <em>(optional)</em></span><input id="actualRegistration" placeholder="e.g. B-1380" value="'+esc(existing.registration||'')+'"></label><label class="confirm-field"><span>Actual flight number (if different) <em>(optional)</em></span><input id="actualFlightNumber" placeholder="e.g. MU5821" value="'+esc(existing.actualFlightNumber||'')+'"></label></div><div class="confirm-actions" id="confirmActions"></div><p class="confirm-note">Aero uses the cached flight plan. This step does not request new flight data.</p></div></div>';
   const holder=document.createElement('div'); holder.innerHTML=modal; document.body.appendChild(holder.firstElementChild);
-  const syncManualFields=()=>{
-    const show=[document.querySelector('#srcFr24'),document.querySelector('#srcVariFlight'),document.querySelector('#srcUmetrip')].some(x=>x&&!x.checked);
-    document.querySelector('#manualConfirmFields')?.classList.toggle('hidden',!show);
-  };
-  ['#srcFr24','#srcVariFlight','#srcUmetrip'].forEach(sel=>document.querySelector(sel)?.addEventListener('change',syncManualFields));
-  document.querySelector('#saveConfirmation').onclick=()=>{
-    const key=confirmKey(f,date), rec={key,airport:state.airport,date,number:numberOf(f),direction:f.__direction||'',time:timeOf(f),scheduledAircraft:aircraftDisplay(f).current,actualAircraft:document.querySelector('#actualAircraft')?.value.trim()||'',registration:document.querySelector('#actualRegistration')?.value.trim()||'',actualFlightNumber:document.querySelector('#actualFlightNumber')?.value.trim().toUpperCase()||'',sources:{fr24:document.querySelector('#srcFr24').checked,variflight:document.querySelector('#srcVariFlight').checked,umetrip:document.querySelector('#srcUmetrip').checked},sourceLabel:[document.querySelector('#srcFr24').checked?'FR24':'',document.querySelector('#srcVariFlight').checked?'VariFlight':'',document.querySelector('#srcUmetrip').checked?'Umetrip':''].filter(Boolean).join(' + '),confirmed:true,confirmedAt:new Date().toISOString()};
+  const getSources=()=>({fr24:document.querySelector('#srcFr24')?.checked??false,variflight:document.querySelector('#srcVariFlight')?.checked??false,umetrip:document.querySelector('#srcUmetrip')?.checked??false});
+  const hasChange=()=>{const x=getSources();return !(x.fr24&&x.variflight&&x.umetrip);};
+  const saveRecord=()=>{
+    const src=getSources(), key=confirmKey(f,date), rec={key,airport:state.airport,date,number:numberOf(f),direction:f.__direction||'',time:timeOf(f),scheduledAircraft:aircraftDisplay(f).current,actualAircraft:document.querySelector('#actualAircraft')?.value.trim()||'',registration:document.querySelector('#actualRegistration')?.value.trim()||'',actualFlightNumber:document.querySelector('#actualFlightNumber')?.value.trim().toUpperCase()||'',sources:src,sourceLabel:[src.fr24?'FR24':'',src.variflight?'VariFlight':'',src.umetrip?'Umetrip':''].filter(Boolean).join(' + '),confirmed:true,confirmedAt:new Date().toISOString()};
     state.confirmations[key]=rec;saveConfirmations();document.querySelector('#confirmModal')?.remove();state.detailFlight=null;render();
   };
-  document.querySelector('#removeConfirmation')?.addEventListener('click',()=>{delete state.confirmations[confirmKey(f,date)];saveConfirmations();document.querySelector('#confirmModal')?.remove();render();});
+  const removeRecord=()=>{
+    delete state.confirmations[confirmKey(f,date)];saveConfirmations();document.querySelector('#confirmModal')?.remove();state.detailFlight=null;render();
+  };
+  const sync=()=>{
+    const changed=hasChange();
+    document.querySelector('#manualConfirmFields')?.classList.toggle('hidden',!changed);
+    const actions=document.querySelector('#confirmActions');
+    if(!actions)return;
+    actions.innerHTML=changed
+      ? '<button id="keepConfirmation">Keep</button><button id="removeConfirmation" class="secondary">Remove</button>'
+      : '<button id="saveConfirmation">✓ Confirm</button><button id="cancelConfirmation" class="secondary">Cancel</button>';
+    document.querySelector('#keepConfirmation')?.addEventListener('click',saveRecord);
+    document.querySelector('#removeConfirmation')?.addEventListener('click',removeRecord);
+    document.querySelector('#saveConfirmation')?.addEventListener('click',saveRecord);
+    document.querySelector('#cancelConfirmation')?.addEventListener('click',()=>document.querySelector('#confirmModal')?.remove());
+  };
+  ['#srcFr24','#srcVariFlight','#srcUmetrip'].forEach(sel=>document.querySelector(sel)?.addEventListener('change',sync));
   document.querySelector('#confirmCancel').onclick=()=>document.querySelector('#confirmModal')?.remove();
+  sync();
 }function bind(){
   document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.day);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
   document.querySelectorAll('[data-weather-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.weatherDay);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
