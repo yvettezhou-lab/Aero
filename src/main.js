@@ -66,8 +66,8 @@ function aircraftDisplay(f){ return aircraftInfo(f); }
 function liveryOf(f){
   const raw=f?.aircraft?.livery || f?.livery || f?.specialLivery || null;
   if(!raw && !(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery)) return null;
-  if(typeof raw==='string') return {name:raw,rarity:'少见',image:''};
-  return {name:raw?.name||raw?.title||raw?.liveryName||'特殊涂装',rarity:raw?.rarity||raw?.level||'少见',image:raw?.image||raw?.imageUrl||raw?.photo||f?.aircraft?.image||''};
+  if(typeof raw==='string') return {name:raw,rarity:'少见'};
+  return {name:raw?.name||raw?.title||raw?.liveryName||'特殊涂装',rarity:raw?.rarity||raw?.level||'少见',image:undefined};
 }
 function liveryClass(r=''){return /稀有|rare/i.test(r)?'rare':/常见|common/i.test(r)?'common':'uncommon';}
 function isCodeshare(f){ return f?.codeshareStatus==='IsCodeshared'; }
@@ -140,7 +140,7 @@ ${state.detailFlight ? detailModal(state.detailFlight) : ''}
 function detailModal(f){
   const info=aircraftDisplay(f), l=liveryOf(f);
   const sources=['AeroDataBox']; if(f.__sources?.includes('FlightAware')) sources.push('FlightAware');
-  return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2>${l?`<div class="livery-detail"><div class="livery-rarity ${liveryClass(l.rarity)}">${esc(l.rarity)}</div><b>${esc(l.name)}</b>${l.image?`<img src="${esc(l.image)}" alt="" loading="lazy">`:''}</div>`:''}<div class="modal-grid"><span>航司</span><b>${esc(airlineOf(f))}</b><span>机型</span><b>${esc(info.current)}</b><span>状态</span><b>${esc(info.level)}</b><span>机号</span><b>${esc(info.registration||'暂无')}</b><span>彩绘</span><b>${l?'已识别':'未识别'}</b><span>数据源</span><b>${esc(sources.join(' + '))}</b></div><p class="modal-note">彩绘只在数据源明确提供或后续机号库确认时标记；没有证据不会猜测。</p></div></div>`;
+  return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2>${l?`<div class="livery-detail"><div class="livery-rarity ${liveryClass(l.rarity)}">${esc(l.rarity)}</div><b>${esc(l.name)}彩绘</b></div>`:''}<div class="modal-grid"><span>航司</span><b>${esc(airlineOf(f))}</b><span>机型</span><b>${esc(info.current)}</b><span>状态</span><b>${esc(info.level)}</b><span>机号</span><b>${esc(info.registration||'暂无')}</b><span>彩绘</span><b>${l?'已识别':'未识别'}</b><span>数据源</span><b>${esc(sources.join(' + '))}</b></div><p class="modal-note">彩绘只在数据源明确提供或后续机号库确认时标记；没有证据不会猜测。</p></div></div>`;
 }
 function spottingPlan(list){
   const windows=[];
@@ -162,7 +162,7 @@ function section(title,list){
       <time>${timeOf(f)}</time>
       <div class="route"><b>${esc(numberOf(f))}</b><span>${esc(airlineOf(f))}</span></div>
       <div class="to">${esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))}</div>
-      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>宽体</span>':''}${liveryOf(f)?`<span class="livery-badge ${liveryClass(liveryOf(f).rarity)}">🎨 ${esc(liveryOf(f).rarity)}</span>`:''}</div>${liveryOf(f)?`<div class="livery-mini"><b>${esc(liveryOf(f).name)}</b></div>`:''}${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${f.__sources?.includes('FlightAware')?`<small class="source-ok">✓ FlightAware 交叉确认</small>`:''}${info.conflict?`<small class="aircraft-conflict">⚠ 机型存在差异</small>`:''}${info.updated?`<small class="aircraft-note">更新 ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}
+      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>宽体</span>':''}${liveryOf(f)?`<span class="livery-badge ${liveryClass(liveryOf(f).rarity)}">🎨 ${esc(liveryOf(f).rarity)}</span>`:''}</div>${liveryOf(f)?`<div class="livery-mini"><b>${esc(liveryOf(f).name)}彩绘 · ${esc(liveryOf(f).rarity)}</b></div>`:''}${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${f.__sources?.includes('FlightAware')?`<small class="source-ok">✓ FlightAware 交叉确认</small>`:''}${info.conflict?`<small class="aircraft-conflict">⚠ 机型存在差异</small>`:''}${info.updated?`<small class="aircraft-note">更新 ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}
     </article>`
   }).join('')}</section>`;
 }
