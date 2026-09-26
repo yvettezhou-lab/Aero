@@ -112,8 +112,8 @@ function filterFlights(list=[]){
 const BUILTIN_TARGETS = [
   {id:'widebody',name:'宽体',filter:{widebody:true}},
   {id:'livery',name:'彩绘',filter:{special:true}},
-  {id:'a350',name:'A350',filter:{aircraftTypes:['A350-900','A350-941','A350-900 (A359)','A350']}},
-  {id:'b787',name:'B787',filter:{aircraftTypes:['B787-8','B787-9','B787-10','B787']}}
+  {id:'a350',name:'A350',filter:{q:'A350'}},
+  {id:'b787',name:'B787',filter:{q:'B787'}}
 ];
 
 function targetFilterSnapshot(){
