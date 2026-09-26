@@ -55,11 +55,12 @@ function aircraft(f){
 }
 function aircraftInfo(f){
   const a=f?.aircraft || {};
-  const current=a.model || a.type || a.icao || a.iata || f?.aircraftType || '未知机型';
-  const registration=a.reg || a.registration || f?.registration || f?.tailNumber || '';
+  const fa=f?.__flightAware||{};
+  const current=a.model || a.type || a.icao || a.iata || f?.aircraftType || fa.aircraftType || '未知机型';
+  const registration=a.reg || a.registration || f?.registration || f?.tailNumber || fa.registration || '';
   const status=String(f?.status||'');
   const level=/Departed|Arrived|EnRoute|Approaching/.test(status) ? '运行/实际' : '当前已知';
-  return {current,level,registration,updated:f?.lastUpdatedUtc||''};
+  return {current,level,registration,updated:f?.lastUpdatedUtc||'',conflict:Boolean(f?.__aircraftConflict)};
 }
 function aircraftDisplay(f){ return aircraftInfo(f); }
 function liveryOf(f){
@@ -157,7 +158,7 @@ function section(title,list){
       <time>${timeOf(f)}</time>
       <div class="route"><b>${esc(numberOf(f))}</b><span>${esc(airlineOf(f))}</span></div>
       <div class="to">${esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))}</div>
-      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>宽体</span>':''}${liveryOf(f)?'<span class="livery">🎨 彩绘</span>':''}</div>${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${f.__sources?.includes('FlightAware')?`<small class="source-ok">✓ FlightAware 交叉确认</small>`:''}${info.updated?`<small class="aircraft-note">更新 ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}
+      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>宽体</span>':''}${liveryOf(f)?'<span class="livery">🎨 彩绘</span>':''}</div>${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${f.__sources?.includes('FlightAware')?`<small class="source-ok">✓ FlightAware 交叉确认</small>`:''}${info.conflict?`<small class="aircraft-conflict">⚠ 机型存在差异</small>`:''}${info.updated?`<small class="aircraft-note">更新 ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}
     </article>`
   }).join('')}</section>`;
 }
