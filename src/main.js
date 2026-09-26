@@ -204,6 +204,7 @@ function render(){
         <label class="field grow"><span>机场</span><select id="airport">${AIRPORTS.map(a=>`<option value="${a[0]}" ${a[0]===state.airport?'selected':''}>${a[0]} · ${a[1]}</option>`).join('')}</select></label>
         <label class="field date"><span>日期</span><input id="date" type="date" value="${state.date}"></label>
       </div>
+      ${weatherCard()}
       <div class="chips">
         <button class="chip wide ${state.widebody?"on":""}" id="wide">✦ 只看宽体</button>
         <button class="chip special ${state.special?"on":""}" id="special">🎨 只看彩绘</button>
