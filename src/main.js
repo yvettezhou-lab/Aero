@@ -1,4 +1,5 @@
 import './style.css';
+import { liveryForRegistration } from './data/liveries.js';
 
 const AIRPORTS = [
   ['KMG','昆明长水','Kunming'],['PEK','北京首都','Beijing'],['PKX','北京大兴','Beijing'],
@@ -64,6 +65,9 @@ function aircraftInfo(f){
 }
 function aircraftDisplay(f){ return aircraftInfo(f); }
 function liveryOf(f){
+  const registration=aircraftInfo(f).registration;
+  const registry=liveryForRegistration(registration);
+  if(registry) return registry;
   const raw=f?.aircraft?.livery || f?.livery || f?.specialLivery || null;
   if(!raw && !(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery)) return null;
   if(typeof raw==='string') return {name:raw,rarity:'少见'};
