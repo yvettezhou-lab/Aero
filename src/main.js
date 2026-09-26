@@ -67,7 +67,7 @@ function liveryOf(f){
   const raw=f?.aircraft?.livery || f?.livery || f?.specialLivery || null;
   if(!raw && !(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery)) return null;
   if(typeof raw==='string') return {name:raw,rarity:'少见'};
-  return {name:raw?.name||raw?.title||raw?.liveryName||'特殊涂装',rarity:raw?.rarity||raw?.level||'少见',image:undefined};
+  return {name:raw?.name||raw?.title||raw?.liveryName||'特殊涂装',rarity:raw?.rarity||raw?.level||'少见'};
 }
 function liveryClass(r=''){return /稀有|rare/i.test(r)?'rare':/常见|common/i.test(r)?'common':'uncommon';}
 function isCodeshare(f){ return f?.codeshareStatus==='IsCodeshared'; }
