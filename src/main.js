@@ -29,6 +29,7 @@ const state = {
   timeTo: '23:59',
   flights: [],
   dayFlights: {},
+  sourceMeta: {},
   loading: false,
   error: ''
 };
@@ -172,7 +173,7 @@ async function fetchDay(date){
   const key=`aero:${state.airport}:${date}`;
   try{
     const cached=JSON.parse(localStorage.getItem(key)||'null');
-    if(cached?.savedAt && Date.now()-cached.savedAt<10*60*1000) return cached.flights||[];
+    if(cached?.savedAt && Date.now()-cached.savedAt<10*60*1000){const flights=cached.flights||[];flights.__fetchedAt=cached.fetchedAt||'';return flights;}
   }catch{}
   const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(date)}`);
   const data=await r.json();
@@ -181,7 +182,8 @@ async function fetchDay(date){
     ...(data.departures||[]).map(f=>({...f,__direction:'dep'})),
     ...(data.arrivals||[]).map(f=>({...f,__direction:'arr'}))
   ];
-  try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights}));}catch{}
+  flights.__fetchedAt=data.fetchedAt||'';
+  try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights, fetchedAt:data.fetchedAt||''}));}catch{}
   return flights;
 }
 async function loadRange(){
