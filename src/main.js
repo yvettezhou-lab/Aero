@@ -22,6 +22,7 @@ const state = {
   special: false,
   aircraftTypes: [],
   selectedAirlines: [],
+  showCodeshare: false,
   airline: 'all',
   q: '',
   timeFrom: '00:00',
@@ -52,18 +53,17 @@ function aircraft(f){
 }
 function aircraftInfo(f){
   const a=f?.aircraft || {};
-  const planned=a.scheduledModel || a.plannedModel || f?.scheduledAircraftType || f?.plannedAircraftType || aircraft(f);
-  const latest=a.latestModel || a.estimatedModel || f?.latestAircraftType || f?.estimatedAircraftType;
-  const actual=a.actualModel || f?.actualAircraftType;
-  const registration=a.registration || a.reg || f?.registration || f?.tailNumber;
-  return {planned,latest,actual,registration};
+  const current=a.model || a.type || a.icao || a.iata || f?.aircraftType || '未知机型';
+  const registration=a.reg || a.registration || f?.registration || f?.tailNumber || '';
+  const status=String(f?.status||'');
+  const level=/Departed|Arrived|EnRoute|Approaching/.test(status) ? '运行/实际' : '当前已知';
+  return {current,level,registration,updated:f?.lastUpdatedUtc||''};
 }
-function aircraftDisplay(f){
-  const x=aircraftInfo(f);
-  const current=x.actual || x.latest || x.planned || '未知机型';
-  let level=x.actual?'实际':(x.latest?'最新':'计划');
-  return {current,level,planned:x.planned,latest:x.latest,actual:x.actual,registration:x.registration};
+function aircraftDisplay(f){ return aircraftInfo(f); }
+function liveryOf(f){
+  return f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery || f?.specialLivery || f?.aircraft?.livery || null;
 }
+function isCodeshare(f){ return f?.codeshareStatus==='IsCodeshared'; }
 function airlineOf(f){
   return f?.airline?.name || f?.airline?.iata || f?.airline?.icao || '未知航司';
 }
@@ -78,10 +78,11 @@ function dayLabel(offset){
 function render(){
   const aircraftTypes=[...new Set(state.flights.map(f=>aircraftDisplay(f).current).filter(x=>x&&x!=='未知机型'))].sort();
   const airlines=[...new Set(state.flights.map(airlineOf).filter(x=>x!=='未知航司'))].sort();
-  const filtered=state.flights.filter(f=>{
+  const visibleFlights=state.showCodeshare?state.flights:state.flights.filter(f=>!isCodeshare(f));
+  const filtered=visibleFlights.filter(f=>{
     const type=aircraftDisplay(f).current, airline=airlineOf(f), n=numberOf(f);
     const t=timeOf(f);
-    const special=Boolean(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery || f?.specialLivery || f?.aircraft?.livery);
+    const special=Boolean(liveryOf(f));
     return (!state.widebody || isWide(type))
       && (!state.special || special)
       && (!state.aircraftTypes.length || state.aircraftTypes.includes(type))
@@ -89,7 +90,7 @@ function render(){
       && (!state.q || (n+' '+airline+' '+type).toLowerCase().includes(state.q.toLowerCase()))
       && t >= state.timeFrom && t <= state.timeTo;
   });
-  const plan=spottingPlan(state.flights);
+  const plan=spottingPlan(filtered);
   const dep=filtered.filter(f=>f.__direction==='dep'), arr=filtered.filter(f=>f.__direction==='arr');
   app.innerHTML=`
   <main>
@@ -105,6 +106,7 @@ function render(){
         <button class="chip ${state.direction==='arr'?'on':''}" data-dir="arr">到达</button>
         <button class="chip wide ${state.widebody?'on':''}" id="wide">✦ 只看宽体</button>
         <button class="chip special ${state.special?'on':''}" id="special">🎨 只看彩绘</button>
+        <button class="chip ${state.showCodeshare?'on':''}" id="codeshare">显示共享</button>
         <div class="aircraft-filter"><span>机型</span><button class="mini ${!state.aircraftTypes.length?'on':''}" data-type="">全部</button>${aircraftTypes.map(t=>`<button class="mini ${state.aircraftTypes.includes(t)?'on':''}" data-type="${esc(t)}">${esc(t)}</button>`).join('')}</div>
         <div class="aircraft-filter"><span>航司</span><button class="mini ${!state.selectedAirlines.length?'on':''}" data-airline="">全部</button>${airlines.map(a=>`<button class="mini ${state.selectedAirlines.includes(a)?'on':''}" data-airline="${esc(a)}">${esc(a)}</button>`).join('')}</div>
       </div>
@@ -124,7 +126,7 @@ function render(){
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
     ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
     <div class="flight-list">${state.direction!=='arr' ? section('出发',dep) : ''}${state.direction!=='dep' ? section('到达',arr) : ''}</div>
-    <footer>数据源：AeroDataBox · 机型按 ICAO 类型自动判断宽体</footer>
+    <footer>数据源：AeroDataBox · 默认隐藏代码共享重复航班 · 更新时间来自数据源</footer>
   </main>`;
   bind();
 }
@@ -135,7 +137,7 @@ function spottingPlan(list){
     const inWin=list.filter(f=>{const t=timeOf(f);return t>=from&&t<to;});
     if(!inWin.length) continue;
     const wide=inWin.filter(f=>isWide(aircraftDisplay(f).current)).length;
-    const livery=inWin.filter(f=>Boolean(f?.aircraft?.isSpecialLivery||f?.aircraft?.specialLivery||f?.specialLivery||f?.aircraft?.livery)).length;
+    const livery=inWin.filter(f=>Boolean(liveryOf(f))).length;
     if(wide||livery) windows.push({from,to,count:inWin.length,wide,livery});
   }
   return windows.slice(0,4);
@@ -148,7 +150,7 @@ function section(title,list){
       <time>${timeOf(f)}</time>
       <div class="route"><b>${esc(numberOf(f))}</b><span>${esc(airlineOf(f))}</span></div>
       <div class="to">${esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))}</div>
-      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>宽体</span>':''}${(f?.aircraft?.isSpecialLivery || f?.aircraft?.specialLivery || f?.specialLivery || f?.aircraft?.livery)?'<span class="livery">🎨 彩绘</span>':''}</div>${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${info.latest&&info.latest!==info.planned?`<small class="aircraft-note">计划 ${esc(info.planned)} · 最新 ${esc(info.latest)}</small>`:''}
+      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>宽体</span>':''}${liveryOf(f)?'<span class="livery">🎨 彩绘</span>':''}</div>${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${info.updated?`<small class="aircraft-note">更新 ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}
     </article>`
   }).join('')}</section>`;
 }
@@ -162,6 +164,7 @@ function bind(){
   document.querySelector('#timeTo').onchange=e=>{state.timeTo=e.target.value;render();};
   document.querySelector('#wide').onclick=()=>{state.widebody=!state.widebody;render();};
   document.querySelector('#special').onclick=()=>{state.special=!state.special;render();};
+  document.querySelector('#codeshare').onclick=()=>{state.showCodeshare=!state.showCodeshare;render();};
   document.querySelectorAll('[data-airline]').forEach(b=>b.onclick=()=>{const a=b.dataset.airline;if(!a)state.selectedAirlines=[];else state.selectedAirlines=state.selectedAirlines.includes(a)?state.selectedAirlines.filter(x=>x!==a):[...state.selectedAirlines,a];render();});
   document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{const t=b.dataset.type;if(!t)state.aircraftTypes=[];else state.aircraftTypes=state.aircraftTypes.includes(t)?state.aircraftTypes.filter(x=>x!==t):[...state.aircraftTypes,t];render();});
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
