@@ -10,7 +10,7 @@ const AIRPORTS = [
   ['ICN','首尔仁川','Seoul',37.4602,126.4407],['TPE','台北桃园','Taipei',25.0797,121.2342],['MNL','马尼拉','Manila',14.5086,121.0197]
 ];
 
-const WIDEBODY = /\b(A300|A310|A330|A340|A350|A380|B747|B767|B77[0-9]|B78[0-9]|DC10|MD11|IL96|L1011)\b/i;
+const WIDEBODY = /\b(?:A300|A310|A330|A340|A350|A380|B747|B767|B77[0-9]|B78[0-9]|DC10|MD11|IL96|L1011)\b|\b(?:Airbus\s+)?A(?:300|310|330|340|350|380)(?:[- ]?[0-9]+)?\b|\b(?:Boeing\s+)?(?:747|767|77[0-9]|78[0-9])(?:[- ]?[0-9]+)?\b/i;
 
 const state = {
   airport: localStorage.getItem('aero-airport') || 'KMG',
@@ -18,7 +18,7 @@ const state = {
   baseDate: localISO(),
   days: 3,
   activeDay: 0,
-  direction: 'all',
+  direction: 'dep',
   widebody: false,
   special: false,
   aircraftTypes: [],
@@ -46,7 +46,7 @@ function localISO(){const d=new Date();return `${d.getFullYear()}-${String(d.get
 
 function esc(s=''){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function airportName(code){ const a=AIRPORTS.find(x=>x[0]===code); return a ? a[1] : code; }
-function isWide(type=''){ return WIDEBODY.test(type.replace(/[- ]/g,'')); }
+function isWide(type=''){ return WIDEBODY.test(String(type)); }
 function timeOf(f){
   const t=f?.departure?.scheduledTime?.local || f?.departure?.revisedTime?.local || f?.arrival?.scheduledTime?.local || '';
   return t ? t.slice(11,16) : '--:--';
@@ -90,10 +90,10 @@ function airlineOf(f){
 }
 function numberOf(f){ return f?.number || f?.flightNumber || '—'; }
 
-function filterFlights(list=[]){
+function filterFlights(list=[], ignoreDirection=false){
   const visible=state.showCodeshare?list:list.filter(f=>!isCodeshare(f));
   return visible.filter(f=>{
-    if(state.direction!=='all' && f.__direction!==state.direction) return false;
+    if(!ignoreDirection && state.direction!=='all' && f.__direction!==state.direction) return false;
     const type=aircraftDisplay(f).current;
     const airline=airlineOf(f);
     const n=numberOf(f);
@@ -194,6 +194,9 @@ function render(){
   const aircraftTypes=[...new Set(state.flights.map(f=>aircraftDisplay(f).current).filter(x=>x&&x!=='未知机型'))].sort();
   const airlines=[...new Set(state.flights.map(airlineOf).filter(x=>x!=='未知航司'))].sort();
   const filtered=filterFlights(state.flights);
+  const directionless=filterFlights(state.flights,true);
+  const depCount=directionless.filter(f=>f.__direction==='dep').length;
+  const arrCount=directionless.filter(f=>f.__direction==='arr').length;
   const plan=spottingPlan(filtered);
   const dep=filtered.filter(f=>f.__direction==='dep'), arr=filtered.filter(f=>f.__direction==='arr');
   app.innerHTML=`
@@ -205,14 +208,15 @@ function render(){
         <label class="field date"><span>日期</span><input id="date" type="date" value="${state.date}"></label>
       </div>
       <div class="chips">
-        <button class="chip ${state.direction==='all'?'on':''}" data-dir="all">全部</button>
-        <button class="chip ${state.direction==='dep'?'on':''}" data-dir="dep">出发</button>
-        <button class="chip ${state.direction==='arr'?'on':''}" data-dir="arr">到达</button>
-        <button class="chip wide ${state.widebody?'on':''}" id="wide">✦ 只看宽体</button>
-        <button class="chip special ${state.special?'on':''}" id="special">🎨 只看彩绘</button>
-        <button class="chip ${state.showCodeshare?'on':''}" id="codeshare">显示共享</button>
-        <div class="aircraft-filter"><span>机型</span><button class="mini ${!state.aircraftTypes.length?'on':''}" data-type="">全部</button>${aircraftTypes.map(t=>`<button class="mini ${state.aircraftTypes.includes(t)?'on':''}" data-type="${esc(t)}">${esc(t)}</button>`).join('')}</div>
-        <div class="aircraft-filter"><span>航司</span><button class="mini ${!state.selectedAirlines.length?'on':''}" data-airline="">全部</button>${airlines.map(a=>`<button class="mini ${state.selectedAirlines.includes(a)?'on':''}" data-airline="${esc(a)}">${esc(a)}</button>`).join('')}</div>
+        <div class="direction-tabs" role="tablist" aria-label="航班方向">
+          <button class="${state.direction==="dep"?"on":""}" data-dir="dep">出发 <span>${depCount}</span></button>
+          <button class="${state.direction==="arr"?"on":""}" data-dir="arr">到达 <span>${arrCount}</span></button>
+        </div>
+        <button class="chip wide ${state.widebody?"on":""}" id="wide">✦ 只看宽体</button>
+        <button class="chip special ${state.special?"on":""}" id="special">🎨 只看彩绘</button>
+        <button class="chip ${state.showCodeshare?"on":""}" id="codeshare">显示共享</button>
+        <div class="aircraft-filter"><span>机型</span><button class="mini ${!state.aircraftTypes.length?"on":""}" data-type="">全部</button>${aircraftTypes.map(t=>`<button class="mini ${state.aircraftTypes.includes(t)?"on":""}" data-type="${esc(t)}">${esc(t)}</button>`).join("")}</div>
+        <div class="aircraft-filter"><span>航司</span><button class="mini ${!state.selectedAirlines.length?"on":""}" data-airline="">全部</button>${airlines.map(a=>`<button class="mini ${state.selectedAirlines.includes(a)?"on":""}" data-airline="${esc(a)}">${esc(a)}</button>`).join("")}</div>
       </div>
       <div class="row">
         <label class="field grow"><span>搜索</span><input id="q" placeholder="航班号 / 机型" value="${esc(state.q)}"></label>
@@ -297,7 +301,7 @@ function bind(){
   document.querySelector('#refresh').onclick=loadRange;
   document.querySelectorAll('.flight').forEach(el=>el.onclick=()=>{const id=el.dataset.flightId; const f=state.flights.find(x=>flightIdentity(x)===id); if(f) {state.detailFlight=f;render();}});
   document.querySelectorAll('[data-target]').forEach(b=>b.onclick=()=>{const id=b.dataset.target;const t=[...BUILTIN_TARGETS,...state.targets].find(x=>x.id===id);if(t)applyTarget(t);});
-  document.querySelector('#clearTarget')?.addEventListener('click',()=>{state.targetId='';state.direction='all';state.widebody=false;state.special=false;state.aircraftTypes=[];state.selectedAirlines=[];state.q='';state.timeFrom='00:00';state.timeTo='23:59';render();});
+  document.querySelector('#clearTarget')?.addEventListener('click',()=>{state.targetId='';state.direction='dep';state.widebody=false;state.special=false;state.aircraftTypes=[];state.selectedAirlines=[];state.q='';state.timeFrom='00:00';state.timeTo='23:59';render();});
   document.querySelector('#saveTarget')?.addEventListener('click',()=>{
     const name=window.prompt('给这个观机目标起个名字','我的目标');
     if(!name?.trim()) return;
