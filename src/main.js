@@ -260,7 +260,7 @@ function spottingPlan(list){
     const wide=inWin.filter(f=>isWide(aircraftDisplay(f).current)).length;
     const livery=inWin.filter(f=>Boolean(liveryOf(f))).length;
     const hasFilter=state.widebody||state.special||state.aircraftTypes.length||state.selectedAirlines.length||state.q||state.timeFrom!=='00:00'||state.timeTo!=='23:59';
-    if(hasFilter ? (wide||livery) : inWin.length) {
+    if(inWin.length) {
       windows.push({
         from,to,count:inWin.length,
         wide:state.widebody?wide:0,
