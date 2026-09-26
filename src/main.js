@@ -222,7 +222,6 @@ function render(){
     <div class="days">${[0,1,2].map(i=>{const d=dayLabel(i);return `<button class="day ${i===state.activeDay?'on':''}" data-day="${i}"><b>${d.label}</b><span>${d.iso.slice(5).replace('-','/')} 周${d.wd}</span></button>`}).join('')}</div>
     <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
     ${weatherCard()}
-    ${targetCard()}
     ${spottingOverview()}\n    ${spottingLogCard()}\n    <div class="flight-tabs" role="tablist" aria-label="航班列表">\n      <button class="${state.listDirection==="dep"?"on":""}" data-dir="dep">出发 <span>${depCount}</span></button>\n      <button class="${state.listDirection==="arr"?"on":""}" data-dir="arr">到达 <span>${arrCount}</span></button>\n    </div>\n    ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
     ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
@@ -239,6 +238,16 @@ function detailModal(f){
   return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2>${l?`<div class="livery-detail"><div class="livery-rarity ${liveryClass(l.rarity)}">${esc(l.rarity)}</div><b>${esc(l.name)}彩绘</b></div>`:''}<div class="modal-grid"><span>航司</span><b>${esc(airlineOf(f))}</b><span>机型</span><b>${esc(info.current)}</b><span>状态</span><b>${esc(info.level)}</b><span>机号</span><b>${esc(info.registration||'暂无')}</b><span>彩绘</span><b>${l?'已识别':'未识别'}</b><span>数据源</span><b>${esc(sources.join(' + '))}</b></div><div class="modal-actions">${spottingRecordButton(f)}</div><p class="modal-note">彩绘只在数据源明确提供或后续机号库确认时标记；没有证据不会猜测。</p></div></div>`;
 }
 function spottingOverview(){
+  const hasActiveFilter=Boolean(
+    state.widebody ||
+    state.special ||
+    state.aircraftTypes.length ||
+    state.selectedAirlines.length ||
+    state.q.trim() ||
+    state.timeFrom!=='00:00' ||
+    state.timeTo!=='23:59'
+  );
+  if(!hasActiveFilter) return '';
   const days=[0,1,2].map(i=>{
     const d=dayLabel(i);
     const list=filterFlights(state.dayFlights[d.iso]||[]);
