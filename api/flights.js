@@ -6,7 +6,7 @@ export default async function handler(req,res){
   if(!key) return res.status(500).json({error:'API Key 尚未配置'});
   if(!airport||!date) return res.status(400).json({error:'缺少机场或日期'});
   const from=`${date}T00:00`, to=`${date}T23:59`;
-  const url=`${BASE}/flights/airports/icao/${encodeURIComponent(airport)}/${from}/${to}`;
+  const url=`${BASE}/flights/airports/iata/${encodeURIComponent(airport)}/${from}/${to}`;
   try{
     const r=await fetch(url,{headers:{'x-rapidapi-key':key,'x-rapidapi-host':'aerodatabox.p.rapidapi.com'}});
     const data=await r.json();
