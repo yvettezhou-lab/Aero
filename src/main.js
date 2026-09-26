@@ -40,7 +40,8 @@ const state = {
   weatherError: '',
   targets: JSON.parse(localStorage.getItem('aero-targets') || '[]'),
   targetId: '',
-  spottingLog: JSON.parse(localStorage.getItem('aero-spotting-log') || '[]')
+  spottingLog: JSON.parse(localStorage.getItem('aero-spotting-log') || '[]'),
+  confirmations: JSON.parse(localStorage.getItem('aero-confirmations') || '{}')
 };
 
 const app = document.querySelector('#app');
@@ -126,6 +127,10 @@ function targetFilterSnapshot(){
 }
 function saveTargets(){try{localStorage.setItem('aero-targets',JSON.stringify(state.targets));}catch{}}
 function saveSpottingLog(){try{localStorage.setItem('aero-spotting-log',JSON.stringify(state.spottingLog.slice(-300)));}catch{}}
+function saveConfirmations(){try{localStorage.setItem('aero-confirmations',JSON.stringify(state.confirmations));}catch{}}
+function confirmKey(f,date=state.date){return [state.airport,date,f?.__direction||'',numberOf(f)].join('|');}
+function confirmationFor(f,date=state.date){return state.confirmations[confirmKey(f,date)]||null;}
+function confirmedListFor(date){return Object.values(state.confirmations).filter(x=>x.airport===state.airport&&x.date===date&&x.confirmed);}
 function applyTarget(target){
   const f=target?.filter||{};
   state.targetId=target?.id||'';
@@ -152,6 +157,7 @@ function recordKey(f){
   const info=aircraftDisplay(f);
   return [state.airport,state.date,info.registration||numberOf(f),numberOf(f)].join('|');
 }
+function confirmButton(f,date=state.date){const c=confirmationFor(f,date);return '<button class="confirm-btn '+(c?.confirmed?'confirmed':'')+'" data-confirm="'+esc(confirmKey(f,date))+'">'+(c?.confirmed?'✓ Confirmed':'Confirm')+'</button>';}
 function spottingRecordButton(f){
   const key=recordKey(f);
   const seen=state.spottingLog.some(x=>x.key===key);
@@ -241,9 +247,9 @@ ${state.detailFlight ? detailModal(state.detailFlight) : ''}
   bind();
 }
 function detailModal(f){
-  const info=aircraftDisplay(f), l=liveryOf(f);
+  const info=aircraftDisplay(f), l=liveryOf(f), date=f.__date||state.date, c=confirmationFor(f,date);
   const sources=['AeroDataBox']; if(f.__sources?.includes('FlightAware')) sources.push('FlightAware');
-  return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2>${l?`<div class="livery-detail"><div class="livery-rarity ${liveryClass(l.rarity)}">${esc(l.rarity)}</div><b>${esc(l.name)}Livery</b></div>`:''}<div class="modal-grid"><span>Airline</span><b>${esc(airlineOf(f))}</b><span>Aircraft</span><b>${esc(info.current)}</b><span>Status</span><b>${esc(info.level)}</b><span>Registration</span><b>${esc(info.registration||'N/A')}</b><span>Livery</span><b>${l?'Identified':'Not identified'}</b><span>Data source</span><b>${esc(sources.join(' + '))}</b></div><div class="modal-actions">${spottingRecordButton(f)}</div><p class="modal-note">Livery is shown only when confirmed by the data source or registration database.</p></div></div>`;
+  return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2>${l?`<div class="livery-detail"><div class="livery-rarity ${liveryClass(l.rarity)}">${esc(l.rarity)}</div><b>${esc(l.name)}Livery</b></div>`:''}<div class="modal-grid"><span>Airline</span><b>${esc(airlineOf(f))}</b><span>Aircraft</span><b>${esc(info.current)}</b><span>Status</span><b>${esc(info.level)}</b><span>Registration</span><b>${esc(info.registration||'N/A')}</b><span>Livery</span><b>${l?'Identified':'Not identified'}</b><span>Data source</span><b>${esc(sources.join(' + '))}</b></div><div class="modal-actions"><button class="modal-confirm-main" data-confirm="${esc(confirmKey(f,date))}">${c?.confirmed?'✓ Confirmed aircraft':'Confirm aircraft'}</button>${spottingRecordButton(f)}</div><p class="modal-note">Confirm manually using FR24, VariFlight, or Umetrip. This does not request new flight data.</p></div></div>`;
 }
 function spottingOverview(){
   const hasActiveFilter=Boolean(
@@ -276,9 +282,15 @@ function spottingOverview(){
       '<div class="spot-flight-route">'+esc(route)+'</div>'+
       '<div class="spot-flight-aircraft"><b>'+esc(info.current)+'</b>'+(wide?'<small>Widebody</small>':'')+(l?'<small class="livery">🎨 '+esc(l.rarity)+'</small>':'')+'</div>'+
       (info.registration?'<small class="spot-reg">'+esc(info.registration)+'</small>':'')+
+      '<div class="spot-confirm">'+confirmButton(f,d.iso)+'</div>'+
       '</div>';
   }).join('');
   return '<section class="spotting"><div class="spotting-head"><b>👀 Spotting Plan</b><span>'+esc(d.label)+' · '+esc(d.iso.slice(5).replace('-','/'))+' · '+list.length+' aircraft</span></div><div class="spotting-body" data-current-index="'+currentIndex+'">'+html+'</div></section>';
+}
+function confirmedList(){
+  const d=dayLabel(state.activeDay), rows=confirmedListFor(d.iso).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  if(!rows.length) return '';
+  return '<section class="confirmed-card"><div class="confirmed-head"><b>✓ Confirmed Spotting List</b><span>'+rows.length+' confirmed</span></div><div class="confirmed-list">'+rows.map(x=>'<div class="confirmed-row"><time>'+esc(x.time||'--:--')+'</time><div><b>'+esc(x.number)+'</b><span>'+esc(x.actualAircraft||x.scheduledAircraft||'Aircraft not entered')+(x.registration?' · '+esc(x.registration):'')+'</span></div><small>'+esc(x.sourceLabel||'Manual confirmation')+'</small></div>').join('')+'</div></section>';
 }
 function spottingPlan(list){
   const windows=[];
@@ -307,11 +319,22 @@ function section(title,list){
       <time>${timeOf(f)}</time>
       <div class="route"><b>${esc(numberOf(f))}</b><span>${esc(airlineOf(f))}</span></div>
       <div class="to">${esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))}</div>
-      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>Widebody</span>':''}${liveryOf(f)?`<span class="livery-badge ${liveryClass(liveryOf(f).rarity)}">🎨 ${esc(liveryOf(f).rarity)}</span>`:''}</div>${liveryOf(f)?`<div class="livery-mini"><b>${esc(liveryOf(f).name)}Livery · ${esc(liveryOf(f).rarity)}</b></div>`:''}${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${f.__sources?.includes('FlightAware')?`<small class="source-ok">✓ FlightAware Cross-checked</small>`:''}${info.conflict?`<small class="aircraft-conflict">⚠ Aircraft data differs</small>`:''}${info.updated?`<small class="aircraft-note">Updated ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}${spottingRecordButton(f)}
+      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>Widebody</span>':''}${liveryOf(f)?`<span class="livery-badge ${liveryClass(liveryOf(f).rarity)}">🎨 ${esc(liveryOf(f).rarity)}</span>`:''}</div>${liveryOf(f)?`<div class="livery-mini"><b>${esc(liveryOf(f).name)}Livery · ${esc(liveryOf(f).rarity)}</b></div>`:''}${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${f.__sources?.includes('FlightAware')?`<small class="source-ok">✓ FlightAware Cross-checked</small>`:''}${confirmButton(f,f.__date||state.date)}${info.conflict?`<small class="aircraft-conflict">⚠ Aircraft data differs</small>`:''}${info.updated?`<small class="aircraft-note">Updated ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}${spottingRecordButton(f)}
     </article>`
   }).join('')}</section>`;
 }
-function bind(){
+function openConfirm(f,date=state.date){
+  const existing=confirmationFor(f,date)||{};
+  const sources=existing.sources||{};
+  const modal='<div class="modal-backdrop" id="confirmModal"><div class="modal confirm-modal"><button class="modal-close" id="confirmCancel">×</button><h2>Confirm Aircraft</h2><div class="confirm-flight"><b>'+esc(numberOf(f))+'</b><span>'+esc(airlineOf(f))+' · '+esc(timeOf(f))+' · '+esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))+'</span></div><div class="confirm-sources"><b>Sources checked</b><label><input type="checkbox" id="srcFr24" '+(sources.fr24?'checked':'')+'> FR24</label><label><input type="checkbox" id="srcVariFlight" '+(sources.variflight?'checked':'')+'> VariFlight</label><label><input type="checkbox" id="srcUmetrip" '+(sources.umetrip?'checked':'')+'> Umetrip</label></div><label class="confirm-field"><span>Actual aircraft</span><input id="actualAircraft" placeholder="e.g. Boeing 737-8 MAX" value="'+esc(existing.actualAircraft||'')+'"></label><label class="confirm-field"><span>Registration</span><input id="actualRegistration" placeholder="e.g. B-1380" value="'+esc(existing.registration||'')+'"></label><div class="confirm-actions"><button id="saveConfirmation">✓ Confirm</button>'+(existing.confirmed?'<button id="removeConfirmation" class="secondary">Remove</button>':'')+'</div><p class="confirm-note">Aero uses the cached flight plan. This step does not request new flight data.</p></div></div>';
+  const holder=document.createElement('div'); holder.innerHTML=modal; document.body.appendChild(holder.firstElementChild);
+  document.querySelector('#saveConfirmation').onclick=()=>{
+    const key=confirmKey(f,date), rec={key,airport:state.airport,date,number:numberOf(f),direction:f.__direction||'',time:timeOf(f),scheduledAircraft:aircraftDisplay(f).current,actualAircraft:document.querySelector('#actualAircraft').value.trim(),registration:document.querySelector('#actualRegistration').value.trim(),sources:{fr24:document.querySelector('#srcFr24').checked,variflight:document.querySelector('#srcVariFlight').checked,umetrip:document.querySelector('#srcUmetrip').checked},sourceLabel:[document.querySelector('#srcFr24').checked?'FR24':'',document.querySelector('#srcVariFlight').checked?'VariFlight':'',document.querySelector('#srcUmetrip').checked?'Umetrip':''].filter(Boolean).join(' + '),confirmed:true,confirmedAt:new Date().toISOString()};
+    state.confirmations[key]=rec;saveConfirmations();document.querySelector('#confirmModal')?.remove();state.detailFlight=null;render();
+  };
+  document.querySelector('#removeConfirmation')?.addEventListener('click',()=>{delete state.confirmations[confirmKey(f,date)];saveConfirmations();document.querySelector('#confirmModal')?.remove();render();});
+  document.querySelector('#confirmCancel').onclick=()=>document.querySelector('#confirmModal')?.remove();
+}function bind(){
   document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.day);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
   document.querySelectorAll('[data-weather-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.weatherDay);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
   document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.baseDate=localISO();state.date=state.baseDate;state.dayFlights={};state.sourceMeta={};loadRange();loadWeather();};
@@ -332,6 +355,7 @@ function bind(){
   document.querySelector('.spotting')?.addEventListener('toggle',e=>{state.spottingOpen=e.currentTarget.open;localStorage.setItem('aero-spotting-open',state.spottingOpen?'1':'0');});
   document.querySelector('#refresh').onclick=()=>loadRange(true);
   document.querySelectorAll('.flight').forEach(el=>el.onclick=()=>{const id=el.dataset.flightId; const f=state.flights.find(x=>flightIdentity(x)===id); if(f) {state.detailFlight=f;render();}});
+  document.querySelectorAll('[data-confirm]').forEach(b=>b.onclick=e=>{e.stopPropagation();const f=state.flights.find(x=>confirmKey(x,x.__date||state.date)===b.dataset.confirm);if(f) openConfirm(f,f.__date||state.date);});
   document.querySelectorAll('[data-target]').forEach(b=>b.onclick=()=>{const id=b.dataset.target;const t=[...BUILTIN_TARGETS,...state.targets].find(x=>x.id===id);if(t)applyTarget(t);});
   document.querySelector('#clearTarget')?.addEventListener('click',()=>{state.targetId='';state.listDirection='dep';state.widebody=false;state.special=false;state.aircraftTypes=[];state.selectedAirlines=[];state.q='';state.timeFrom='00:00';state.timeTo='23:59';render();});
   document.querySelector('#saveTarget')?.addEventListener('click',()=>{
@@ -350,7 +374,7 @@ async function fetchDay(date,force=false){
   try{
     const cached=JSON.parse(localStorage.getItem(key)||'null');
     if(!force && cached?.savedAt){
-      const flights=(cached.flights||[]).map(f=>{
+      const flights=(cached.flights||[]).map(f=>{f={...f,__date:f.__date||date};
         const override=aircraftOverrideFor(state.airport,date,f.__direction,numberOf(f));
         if(!override) return f;
         return {
@@ -370,8 +394,8 @@ async function fetchDay(date,force=false){
   const data=await r.json();
   if(!r.ok) throw new Error(data.error||'Failed to load flights');
   const flights=[
-    ...(data.departures||[]).map(f=>({...f,__direction:'dep'})),
-    ...(data.arrivals||[]).map(f=>({...f,__direction:'arr'}))
+    ...(data.departures||[]).map(f=>({...f,__direction:'dep',__date:date})),
+    ...(data.arrivals||[]).map(f=>({...f,__direction:'arr',__date:date}))
   ].map(f=>{
     const override=aircraftOverrideFor(state.airport,date,f.__direction,numberOf(f));
     if(!override) return f;
