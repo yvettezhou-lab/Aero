@@ -2,12 +2,12 @@ import './style.css';
 import { liveryForRegistration } from './data/liveries.js';
 
 const AIRPORTS = [
-  ['KMG','昆明长水','Kunming',24.9924,102.7435],['PEK','北京首都','Beijing',40.0799,116.6031],['PKX','北京大兴','Beijing',39.5098,116.4105],
-  ['PVG','上海浦东','Shanghai',31.1443,121.8083],['SHA','上海虹桥','Shanghai',31.1979,121.3363],['CAN','广州白云','Guangzhou',23.3924,113.2988],
-  ['SZX','深圳宝安','Shenzhen',22.6393,113.8107],['TFU','成都天府','Chengdu',30.3125,104.4419],
-  ['HKG','香港','Hong Kong',22.3080,113.9185],['SIN','新加坡樟宜','Singapore',1.3644,103.9915],['BKK','曼谷素万那普','Bangkok',13.6900,100.7501],
-  ['KUL','吉隆坡','Kuala Lumpur',2.7456,101.7099],['NRT','东京成田','Tokyo',35.7720,140.3929],['HND','东京羽田','Tokyo',35.5494,139.7798],
-  ['ICN','首尔仁川','Seoul',37.4602,126.4407],['TPE','台北桃园','Taipei',25.0797,121.2342],['MNL','马尼拉','Manila',14.5086,121.0197]
+  ['KMG','Kunming Changshui','Kunming',24.9924,102.7435],['PEK','Beijing Capital','Beijing',40.0799,116.6031],['PKX','Beijing Daxing','Beijing',39.5098,116.4105],
+  ['PVG','Shanghai Pudong','Shanghai',31.1443,121.8083],['SHA','Shanghai Hongqiao','Shanghai',31.1979,121.3363],['CAN','Guangzhou Baiyun','Guangzhou',23.3924,113.2988],
+  ['SZX','Shenzhen Bao’an','Shenzhen',22.6393,113.8107],['TFU','Chengdu Tianfu','Chengdu',30.3125,104.4419],
+  ['HKG','Hong Kong','Hong Kong',22.3080,113.9185],['SIN','Singapore Changi','Singapore',1.3644,103.9915],['BKK','Bangkok Suvarnabhumi','Bangkok',13.6900,100.7501],
+  ['KUL','Kuala Lumpur','Kuala Lumpur',2.7456,101.7099],['NRT','Tokyo Narita','Tokyo',35.7720,140.3929],['HND','Tokyo Haneda','Tokyo',35.5494,139.7798],
+  ['ICN','Seoul Incheon','Seoul',37.4602,126.4407],['TPE','Taipei Taoyuan','Taipei',25.0797,121.2342],['MNL','Manila','Manila',14.5086,121.0197]
 ];
 
 const WIDEBODY = /\b(?:A300|A310|A330|A340|A350|A380|B747|B767|B77[0-9]|B78[0-9]|DC10|MD11|IL96|L1011)\b|\b(?:Airbus\s+)?A(?:300|310|330|340|350|380)(?:[- ]?[0-9]+)?\b|\b(?:Boeing\s+)?(?:747|767|77[0-9]|78[0-9])(?:[- ]?[0-9]+)?\b/i;
@@ -169,7 +169,7 @@ function spottingLogCard(){
   const recent=[...state.spottingLog].reverse().slice(0,8);
   const today=state.spottingLog.filter(x=>x.airport===state.airport&&x.date===state.date);
   return '<section class="log-card"><div class="log-head"><div><b>📒 My Spotting Log</b><span>'+today.length+' logged</span></div><button class="log-clear" id="clearLog">Clear all</button></div>'+
-    (recent.length?'<div class="log-list">'+recent.map(x=>'<div class="log-row"><div><b>'+esc(x.number)+'</b><span>'+esc(x.airport)+' · '+esc(x.date.slice(5).replace('-','/'))+'</span></div><div><strong>'+esc(x.type)+'</strong>'+(x.registration?'<small>'+esc(x.registration)+'</small>':'')+(x.livery?'<em>🎨 '+esc(x.livery)+' · '+esc(x.rarity||'Uncommon')+'</em>':'')+'</div></div>').join('')+'</div>':'<div class="log-empty">看到飞机后，在详情里点“✓ Seen it”，Aero 会帮你留下记录。</div>')+
+    (recent.length?'<div class="log-list">'+recent.map(x=>'<div class="log-row"><div><b>'+esc(x.number)+'</b><span>'+esc(x.airport)+' · '+esc(x.date.slice(5).replace('-','/'))+'</span></div><div><strong>'+esc(x.type)+'</strong>'+(x.registration?'<small>'+esc(x.registration)+'</small>':'')+(x.livery?'<em>🎨 '+esc(x.livery)+' · '+esc(x.rarity||'Uncommon')+'</em>':'')+'</div></div>').join('')+'</div>':'<div class="log-empty">After spotting a flight, tap “✓ Seen it” in its details to save a record.</div>')+
     '</section>';
 }
 function sourceFooter(){
@@ -179,7 +179,7 @@ function sourceFooter(){
   return '<div class="source-bar"><span>AeroDataBox ✓</span><span>'+second+'</span></div>';
 }
 function airportMeta(){const a=AIRPORTS.find(x=>x[0]===state.airport);return a?{name:a[1],lat:a[3],lon:a[4]}:null;}
-function weatherText(c){const m={0:'Clear',1:'大部Clear朗',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Drizzle',53:'Drizzle',55:'Drizzle',61:'Light rain',63:'Moderate rain',65:'Heavy rain',80:'Showers',81:'Showers',82:'强Showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};return m[c]||'Changing weather';}
+function weatherText(c){const m={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Drizzle',53:'Drizzle',55:'Drizzle',61:'Light rain',63:'Moderate rain',65:'Heavy rain',80:'Showers',81:'Showers',82:'Heavy showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};return m[c]||'Changing weather';}
 function weatherIcon(c){if(c===0)return '☀️';if([1,2].includes(c))return '🌤️';if(c===3)return '☁️';if([45,48].includes(c))return '🌫️';if([51,53,55,61,63,65,80,81,82].includes(c))return '🌧️';if([95,96,99].includes(c))return '⛈️';return '🌤️';}
 function weatherSummary(date){const h=state.weather?.hourly;if(!h?.time)return null;const rows=h.time.map((t,i)=>({t,i})).filter(x=>x.t.startsWith(date)&&+x.t.slice(11,13)>=6&&+x.t.slice(11,13)<22);if(!rows.length)return null;const nums=k=>rows.map(x=>Number(h[k]?.[x.i])).filter(Number.isFinite);const rp=nums('precipitation_probability'),vis=nums('visibility'),wind=nums('wind_speed_10m');const maxRain=rp.length?Math.max(...rp):0,minVis=vis.length?Math.min(...vis):null,maxWind=wind.length?Math.max(...wind):null;let level='Good';if(maxRain>50||(minVis!=null&&minVis<5000)||(maxWind!=null&&maxWind>35))level='Watch conditions';if(maxRain>75||(minVis!=null&&minVis<3000)||(maxWind!=null&&maxWind>50))level='Not ideal';const good=rows.filter(x=>Number(h.precipitation_probability?.[x.i]??0)<=30&&Number(h.visibility?.[x.i]??99999)>=8000&&Number(h.wind_speed_10m?.[x.i]??0)<=30).map(x=>x.t.slice(11,16)).slice(0,4);return{level,maxRain,minVis,maxWind,good};}
 function weatherCard(){
@@ -207,31 +207,31 @@ function render(){
   const plan=spottingPlan(filtered);
   app.innerHTML=`
   <main>
-    <header><div class="brand"><span class="logo">✈</span><div><h1>Aero</h1><p>看Today飞什么机</p></div></div><button class="refresh" id="refresh">Refresh Data</button></header>
+    <header><div class="brand"><span class="logo">✈</span><div><h1>Aero</h1><p>What’s flying today?</p></div></div><button class="refresh" id="refresh">Refresh Data</button></header>
     <section class="panel">
       <div class="airport-date-row">
               <label class="field airport-field"><span>Airport</span><select id="airport">${AIRPORTS.map(a=>`<option value="${a[0]}" ${a[0]===state.airport?"selected":""}>${a[0]} · ${a[1]}</option>`).join("")}</select></label>
         <div class="days-inline">${dayTabs()}</div>
       </div>
       ${weatherCard()}  <div class="chips">
-        <button class="chip wide ${state.widebody?"on":""}" id="wide">✦ 只看Widebody</button>
-        <button class="chip ${state.special?"on":""}" id="special">🎨 只看Livery</button>
+        <button class="chip wide ${state.widebody?"on":""}" id="wide">✦ Widebody Only</button>
+        <button class="chip ${state.special?"on":""}" id="special">🎨 Special Livery</button>
         <button class="chip ${state.showCodeshare?"on":""}" id="codeshare">Show Codeshare</button>
       </div>
       <div class="filter-select-row">
-        <label class="filter-select"><span>Aircraft</span><select id="aircraftSelect"><option value="">全部Aircraft</option>${aircraftTypes.map(t=>`<option value="${esc(t)}" ${state.aircraftTypes.includes(t)?"selected":""}>${esc(t)}</option>`).join("")}</select></label>
-        <label class="filter-select"><span>Airline</span><select id="airlineSelect"><option value="">全部Airline</option>${airlines.map(a=>`<option value="${esc(a)}" ${state.selectedAirlines.includes(a)?"selected":""}>${esc(a)}</option>`).join("")}</select></label>
+        <label class="filter-select"><span>Aircraft</span><select id="aircraftSelect"><option value="">All Aircraft</option>${aircraftTypes.map(t=>`<option value="${esc(t)}" ${state.aircraftTypes.includes(t)?"selected":""}>${esc(t)}</option>`).join("")}</select></label>
+        <label class="filter-select"><span>Airline</span><select id="airlineSelect"><option value="">All Airlines</option>${airlines.map(a=>`<option value="${esc(a)}" ${state.selectedAirlines.includes(a)?"selected":""}>${esc(a)}</option>`).join("")}</select></label>
       </div>
       <div class="compact-search-row">
-        <label class="field search-field"><span>Search</span><input id="q" placeholder="航班号 / Aircraft" value="${esc(state.q)}"></label>
+        <label class="field search-field"><span>Search</span><input id="q" placeholder="Flight No. / Aircraft" value="${esc(state.q)}"></label>
         <label class="field compact-time-field"><span>Time</span><div class="time-pair"><input id="timeFrom" type="time" value="${state.timeFrom}"><i>—</i><input id="timeTo" type="time" value="${state.timeTo}"></div></label>
       </div>
     </section>
 
-    <div class="summary"><strong>${filtered.length}</strong> flights <span>·</span> ${state.widebody?'已筛选Widebody':'全部Aircraft'} ${state.loading?'· Updating…':''}</div>
-    ${spottingOverview()}\n    ${spottingLogCard()}\n    <div class="flight-tabs" role="tablist" aria-label="航班列表">\n      <button class="${state.listDirection==="dep"?"on":""}" data-dir="dep">Departures <span>${depCount}</span></button>\n      <button class="${state.listDirection==="arr"?"on":""}" data-dir="arr">Arrivals <span>${arrCount}</span></button>\n    </div>\n    ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
+    <div class="summary"><strong>${filtered.length}</strong> flights <span>·</span> ${state.widebody?'Widebody filtered':'All Aircraft'} ${state.loading?'· Updating…':''}</div>
+    ${spottingOverview()}\n    ${spottingLogCard()}\n    <div class="flight-tabs" role="tablist" aria-label="Flight list">\n      <button class="${state.listDirection==="dep"?"on":""}" data-dir="dep">Departures <span>${depCount}</span></button>\n      <button class="${state.listDirection==="arr"?"on":""}" data-dir="arr">Arrivals <span>${arrCount}</span></button>\n    </div>\n    ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">Loading flights…</div>' : ''}
-    ${!state.loading && !filtered.length ? '<div class="empty"><b>No matching flights</b><span>试试关闭“只看Widebody”或换一天</span></div>' : ''}
+    ${!state.loading && !filtered.length ? '<div class="empty"><b>No matching flights</b><span>试试关闭“Widebody Only”或换一天</span></div>' : ''}
 ${state.detailFlight ? detailModal(state.detailFlight) : ''}
     <div class="flight-list">${state.listDirection==='dep' ? section('Departures',dep) : section('Arrivals',arr)}</div>
     ${sourceFooter()}
@@ -242,7 +242,7 @@ ${state.detailFlight ? detailModal(state.detailFlight) : ''}
 function detailModal(f){
   const info=aircraftDisplay(f), l=liveryOf(f);
   const sources=['AeroDataBox']; if(f.__sources?.includes('FlightAware')) sources.push('FlightAware');
-  return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2>${l?`<div class="livery-detail"><div class="livery-rarity ${liveryClass(l.rarity)}">${esc(l.rarity)}</div><b>${esc(l.name)}Livery</b></div>`:''}<div class="modal-grid"><span>Airline</span><b>${esc(airlineOf(f))}</b><span>Aircraft</span><b>${esc(info.current)}</b><span>Status</span><b>${esc(info.level)}</b><span>Registration</span><b>${esc(info.registration||'N/A')}</b><span>Livery</span><b>${l?'Identified':'Not identified'}</b><span>Data source</span><b>${esc(sources.join(' + '))}</b></div><div class="modal-actions">${spottingRecordButton(f)}</div><p class="modal-note">Livery只在Data source明确提供或后续Registration库确认时标记；没有证据不会猜测。</p></div></div>`;
+  return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2>${l?`<div class="livery-detail"><div class="livery-rarity ${liveryClass(l.rarity)}">${esc(l.rarity)}</div><b>${esc(l.name)}Livery</b></div>`:''}<div class="modal-grid"><span>Airline</span><b>${esc(airlineOf(f))}</b><span>Aircraft</span><b>${esc(info.current)}</b><span>Status</span><b>${esc(info.level)}</b><span>Registration</span><b>${esc(info.registration||'N/A')}</b><span>Livery</span><b>${l?'Identified':'Not identified'}</b><span>Data source</span><b>${esc(sources.join(' + '))}</b></div><div class="modal-actions">${spottingRecordButton(f)}</div><p class="modal-note">Livery is shown only when confirmed by the data source or registration database.</p></div></div>`;
 }
 function spottingOverview(){
   const hasActiveFilter=Boolean(
@@ -306,7 +306,7 @@ function section(title,list){
       <time>${timeOf(f)}</time>
       <div class="route"><b>${esc(numberOf(f))}</b><span>${esc(airlineOf(f))}</span></div>
       <div class="to">${esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))}</div>
-      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>Widebody</span>':''}${liveryOf(f)?`<span class="livery-badge ${liveryClass(liveryOf(f).rarity)}">🎨 ${esc(liveryOf(f).rarity)}</span>`:''}</div>${liveryOf(f)?`<div class="livery-mini"><b>${esc(liveryOf(f).name)}Livery · ${esc(liveryOf(f).rarity)}</b></div>`:''}${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${f.__sources?.includes('FlightAware')?`<small class="source-ok">✓ FlightAware Cross-checked</small>`:''}${info.conflict?`<small class="aircraft-conflict">⚠ Aircraft存在差异</small>`:''}${info.updated?`<small class="aircraft-note">Updated ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}${spottingRecordButton(f)}
+      <div class="aircraft"><b>${esc(type)}</b><small class="aircraft-level">${info.level}</small>${wide?'<span>Widebody</span>':''}${liveryOf(f)?`<span class="livery-badge ${liveryClass(liveryOf(f).rarity)}">🎨 ${esc(liveryOf(f).rarity)}</span>`:''}</div>${liveryOf(f)?`<div class="livery-mini"><b>${esc(liveryOf(f).name)}Livery · ${esc(liveryOf(f).rarity)}</b></div>`:''}${info.registration?`<small class="registration">${esc(info.registration)}</small>`:''}${f.__sources?.includes('FlightAware')?`<small class="source-ok">✓ FlightAware Cross-checked</small>`:''}${info.conflict?`<small class="aircraft-conflict">⚠ Aircraft data differs</small>`:''}${info.updated?`<small class="aircraft-note">Updated ${esc(info.updated.replace('T',' ').replace('Z',' UTC'))}</small>`:''}${spottingRecordButton(f)}
     </article>`
   }).join('')}</section>`;
 }
@@ -334,12 +334,12 @@ function bind(){
   document.querySelectorAll('[data-target]').forEach(b=>b.onclick=()=>{const id=b.dataset.target;const t=[...BUILTIN_TARGETS,...state.targets].find(x=>x.id===id);if(t)applyTarget(t);});
   document.querySelector('#clearTarget')?.addEventListener('click',()=>{state.targetId='';state.listDirection='dep';state.widebody=false;state.special=false;state.aircraftTypes=[];state.selectedAirlines=[];state.q='';state.timeFrom='00:00';state.timeTo='23:59';render();});
   document.querySelector('#saveTarget')?.addEventListener('click',()=>{
-    const name=window.prompt('给这个Spotting Target起个名字','My Target');
+    const name=window.prompt('Name this Spotting Target','My Target');
     if(!name?.trim()) return;
     const target={id:'custom-'+Date.now(),name:name.trim(),filter:targetFilterSnapshot()};
     state.targets.push(target);state.targetId=target.id;saveTargets();render();
   });
-  document.querySelector('#clearLog')?.addEventListener('click',()=>{if(window.confirm('Clear all全部观机记录？')){state.spottingLog=[];saveSpottingLog();render();}});
+  document.querySelector('#clearLog')?.addEventListener('click',()=>{if(window.confirm('Clear all spotting records?')){state.spottingLog=[];saveSpottingLog();render();}});
   document.querySelectorAll('[data-seen]').forEach(b=>b.onclick=e=>{e.stopPropagation();const key=b.dataset.seen;const f=state.flights.find(x=>recordKey(x)===key);if(f)markSeen(f);});
   document.querySelector('#closeModal')?.addEventListener('click',()=>{state.detailFlight=null;render();});
   document.querySelector('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'){state.detailFlight=null;render();}});
@@ -352,7 +352,7 @@ async function fetchDay(date,force=false){
   }catch{}
   const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(date)}&showCodeshare=${state.showCodeshare}`);
   const data=await r.json();
-  if(!r.ok) throw new Error(data.error||'读取航班失败');
+  if(!r.ok) throw new Error(data.error||'Failed to load flights');
   const flights=[
     ...(data.departures||[]).map(f=>({...f,__direction:'dep'})),
     ...(data.arrivals||[]).map(f=>({...f,__direction:'arr'}))
@@ -392,10 +392,10 @@ async function loadWeather(){
   try{
     const r=await fetch('/api/weather?lat='+encodeURIComponent(meta.lat)+'&lon='+encodeURIComponent(meta.lon)+'&start='+encodeURIComponent(state.baseDate)+'&end='+encodeURIComponent(endISO));
     const data=await r.json();
-    if(!r.ok) throw new Error(data.error||'Weather读取失败');
+    if(!r.ok) throw new Error(data.error||'Failed to load weather');
     state.weather=data;
     try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),data}));}catch{}
-  }catch(e){state.weather=null;state.weatherError='Weather暂时无法读取';}
+  }catch(e){state.weather=null;state.weatherError='Weather temporarily unavailable';}
   finally{state.weatherLoading=false;render();}
 }
 async function load(){
