@@ -203,8 +203,8 @@ function section(title,list){
 }
 function bind(){
   document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{state.activeDay=Number(b.dataset.day);state.date=dayLabel(state.activeDay).iso;state.flights=state.dayFlights[state.date]||[];render();});
-  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.baseDate=localISO();state.date=state.baseDate;state.dayFlights={};loadRange();};
-  document.querySelector('#date').onchange=e=>{state.baseDate=e.target.value;state.date=state.baseDate;state.activeDay=0;state.dayFlights={};loadRange();};
+  document.querySelector('#airport').onchange=e=>{state.airport=e.target.value;localStorage.setItem('aero-airport',state.airport);state.activeDay=0;state.baseDate=localISO();state.date=state.baseDate;state.dayFlights={};state.sourceMeta={};loadRange();};
+  document.querySelector('#date').onchange=e=>{state.baseDate=e.target.value;state.date=state.baseDate;state.activeDay=0;state.dayFlights={};state.sourceMeta={};loadRange();};
   document.querySelector('#q').oninput=e=>{state.q=e.target.value;render();};
   document.querySelector('#timeFrom').onchange=e=>{state.timeFrom=e.target.value;render();};
   document.querySelector('#timeTo').onchange=e=>{state.timeTo=e.target.value;render();};
