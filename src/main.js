@@ -20,6 +20,7 @@ const state = {
   widebody: false,
   special: false,
   aircraftTypes: [],
+  selectedAirlines: [],
   airline: 'all',
   q: '',
   timeFrom: '00:00',
@@ -86,6 +87,7 @@ function render(){
         <button class="chip wide ${state.widebody?'on':''}" id="wide">✦ 只看宽体</button>
         <button class="chip special ${state.special?'on':''}" id="special">🎨 只看彩绘</button>
         <div class="aircraft-filter"><span>机型</span><button class="mini ${!state.aircraftTypes.length?'on':''}" data-type="">全部</button>${aircraftTypes.map(t=>`<button class="mini ${state.aircraftTypes.includes(t)?'on':''}" data-type="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+        <div class="aircraft-filter"><span>航司</span><button class="mini ${!state.selectedAirlines.length?'on':''}" data-airline="">全部</button>${airlines.map(a=>`<button class="mini ${state.selectedAirlines.includes(a)?'on':''}" data-airline="${esc(a)}">${esc(a)}</button>`).join('')}</div>
       </div>
       <div class="row">
         <label class="field grow"><span>航司</span><select id="airline"><option value="all">全部航司</option>${airlines.map(a=>`<option value="${esc(a)}" ${a===state.airline?'selected':''}>${esc(a)}</option>`).join('')}</select></label>
@@ -128,6 +130,7 @@ function bind(){
   document.querySelector('#timeTo').onchange=e=>{state.timeTo=e.target.value;render();};
   document.querySelector('#wide').onclick=()=>{state.widebody=!state.widebody;render();};
   document.querySelector('#special').onclick=()=>{state.special=!state.special;render();};
+  document.querySelectorAll('[data-airline]').forEach(b=>b.onclick=()=>{const a=b.dataset.airline;if(!a)state.selectedAirlines=[];else state.selectedAirlines=state.selectedAirlines.includes(a)?state.selectedAirlines.filter(x=>x!==a):[...state.selectedAirlines,a];render();});
   document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{const t=b.dataset.type;if(!t)state.aircraftTypes=[];else state.aircraftTypes=state.aircraftTypes.includes(t)?state.aircraftTypes.filter(x=>x!==t):[...state.aircraftTypes,t];render();});
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
   document.querySelector('#refresh').onclick=load;
