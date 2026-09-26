@@ -54,7 +54,7 @@ export default async function handler(req,res){
         const target=date;
         const fd2=(fd.scheduled||[]).filter(x=>String(x.scheduled_out||'').slice(0,10)===target).map(x=>faToFlight(x,'dep')).filter(Boolean);
         const fa2=(fa.scheduled||[]).filter(x=>String(x.scheduled_in||'').slice(0,10)===target).map(x=>faToFlight(x,'arr')).filter(Boolean);
-        const byKey=(x)=>String(x.number||x.flightNumber||'').replace(/\s+/g,'').toUpperCase()+'|'+String(x.departure?.scheduledTime?.local||x.arrival?.scheduledTime?.local||'').slice(0,16);
+        const byKey=(x)=>String(x.number||x.flightNumber||'').replace(/\s+/g,'').toUpperCase();
         const boxMap=new Map([...departures,...arrivals].map(x=>[byKey(x),x]));
         for(const x of [...fd2,...fa2]){
           const hit=boxMap.get(byKey(x));
