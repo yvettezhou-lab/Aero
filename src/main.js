@@ -188,7 +188,7 @@ function bind(){
   document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{const t=b.dataset.type;if(!t)state.aircraftTypes=[];else state.aircraftTypes=state.aircraftTypes.includes(t)?state.aircraftTypes.filter(x=>x!==t):[...state.aircraftTypes,t];render();});
   document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.direction=b.dataset.dir;render();});
   document.querySelector('#refresh').onclick=loadRange;
-  document.querySelectorAll('.flight').forEach(el=>el.onclick=()=>{const n=el.querySelector('.route b')?.textContent; const f=state.flights.find(x=>numberOf(x)===n); if(f) {state.detailFlight=f;render();}});
+  document.querySelectorAll('.flight').forEach(el=>el.onclick=()=>{const id=el.dataset.flightId; const f=state.flights.find(x=>flightIdentity(x)===id); if(f) {state.detailFlight=f;render();}});
   document.querySelector('#closeModal')?.addEventListener('click',()=>{state.detailFlight=null;render();});
   document.querySelector('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'){state.detailFlight=null;render();}});
 }
