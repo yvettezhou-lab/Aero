@@ -135,7 +135,7 @@ function render(){
     </section>
     <div class="days">${[0,1,2].map(i=>{const d=dayLabel(i);return `<button class="day ${i===state.activeDay?'on':''}" data-day="${i}"><b>${d.label}</b><span>${d.iso.slice(5).replace('-','/')} 周${d.wd}</span></button>`}).join('')}</div>
     <div class="summary"><strong>${filtered.length}</strong> 个航班 <span>·</span> ${state.widebody?'已筛选宽体':'全部机型'} ${state.loading?'· 更新中…':''}</div>
-    ${plan ? `<section class="spotting"><div class="spotting-head"><b>👀 观机计划</b><span>按 2 小时窗口汇总</span></div>${plan.map(x=>`<div class="spot-window"><div><b>${x.from}–${x.to}</b><small>${x.count} 个航班</small></div><div class="spot-tags">${x.wide?`<span>宽体 ${x.wide}</span>`:''}${x.livery?`<span class="livery">🎨 彩绘 ${x.livery}</span>`:''}</div></div>`).join('')}</section>` : ''}
+    ${spottingOverview()}
     ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">正在读取航班…</div>' : ''}
     ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
@@ -149,6 +149,19 @@ function detailModal(f){
   const info=aircraftDisplay(f), l=liveryOf(f);
   const sources=['AeroDataBox']; if(f.__sources?.includes('FlightAware')) sources.push('FlightAware');
   return `<div class="modal-backdrop" id="modal"><div class="modal"><button class="modal-close" id="closeModal">×</button><h2>${esc(numberOf(f))}</h2>${l?`<div class="livery-detail"><div class="livery-rarity ${liveryClass(l.rarity)}">${esc(l.rarity)}</div><b>${esc(l.name)}彩绘</b></div>`:''}<div class="modal-grid"><span>航司</span><b>${esc(airlineOf(f))}</b><span>机型</span><b>${esc(info.current)}</b><span>状态</span><b>${esc(info.level)}</b><span>机号</span><b>${esc(info.registration||'暂无')}</b><span>彩绘</span><b>${l?'已识别':'未识别'}</b><span>数据源</span><b>${esc(sources.join(' + '))}</b></div><p class="modal-note">彩绘只在数据源明确提供或后续机号库确认时标记；没有证据不会猜测。</p></div></div>`;
+}
+function spottingOverview(){
+  const days=[0,1,2].map(i=>{
+    const d=dayLabel(i);
+    const list=state.dayFlights[d.iso]||[];
+    const p=spottingPlan(list);
+    if(!p.length) return '';
+    return '<div class="spot-day"><b>'+d.label+' · '+d.iso.slice(5).replace('-','/')+' 周'+d.wd+'</b>'+
+      p.map(x=>'<div class="spot-window"><div><b>'+x.from+'–'+x.to+'</b><small>'+x.count+' 个航班</small></div><div class="spot-tags">'+
+      (x.wide?'<span>宽体 '+x.wide+'</span>':'')+(x.livery?'<span class="livery">🎨 彩绘 '+x.livery+'</span>':'')+
+      '</div></div>').join('')+'</div>';
+  }).join('');
+  return '<section class="spotting"><div class="spotting-head"><b>👀 3天观机计划</b><span>按 2 小时窗口汇总</span></div>'+days+'</section>';
 }
 function spottingPlan(list){
   const windows=[];
