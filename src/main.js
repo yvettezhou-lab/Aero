@@ -84,18 +84,13 @@ function airlineOf(f){
 }
 function numberOf(f){ return f?.number || f?.flightNumber || '—'; }
 
-function dayLabel(offset){
-  const d=new Date(state.baseDate+'T12:00:00'); d.setDate(d.getDate()+offset);
-  const iso=d.toISOString().slice(0,10);
-  const wd=['日','一','二','三','四','五','六'][d.getDay()];
-  return {iso,label:offset===0?'今天':offset===1?'明天':offset===2?'后天':`${d.getMonth()+1}/${d.getDate()}`,wd};
-}
-function render(){
-  const aircraftTypes=[...new Set(state.flights.map(f=>aircraftDisplay(f).current).filter(x=>x&&x!=='未知机型'))].sort();
-  const airlines=[...new Set(state.flights.map(airlineOf).filter(x=>x!=='未知航司'))].sort();
-  const visibleFlights=state.showCodeshare?state.flights:state.flights.filter(f=>!isCodeshare(f));
-  const filtered=visibleFlights.filter(f=>{
-    const type=aircraftDisplay(f).current, airline=airlineOf(f), n=numberOf(f);
+function filterFlights(list=[]){
+  const visible=state.showCodeshare?list:list.filter(f=>!isCodeshare(f));
+  return visible.filter(f=>{
+    if(state.direction!=='all' && f.__direction!==state.direction) return false;
+    const type=aircraftDisplay(f).current;
+    const airline=airlineOf(f);
+    const n=numberOf(f);
     const t=timeOf(f);
     const special=Boolean(liveryOf(f));
     return (!state.widebody || isWide(type))
@@ -105,6 +100,18 @@ function render(){
       && (!state.q || (n+' '+airline+' '+type).toLowerCase().includes(state.q.toLowerCase()))
       && t >= state.timeFrom && t <= state.timeTo;
   });
+}
+
+function dayLabel(offset){
+  const d=new Date(state.baseDate+'T12:00:00'); d.setDate(d.getDate()+offset);
+  const iso=d.toISOString().slice(0,10);
+  const wd=['日','一','二','三','四','五','六'][d.getDay()];
+  return {iso,label:offset===0?'今天':offset===1?'明天':offset===2?'后天':`${d.getMonth()+1}/${d.getDate()}`,wd};
+}
+function render(){
+  const aircraftTypes=[...new Set(state.flights.map(f=>aircraftDisplay(f).current).filter(x=>x&&x!=='未知机型'))].sort();
+  const airlines=[...new Set(state.flights.map(airlineOf).filter(x=>x!=='未知航司'))].sort();
+  const filtered=filterFlights(state.flights);
   const plan=spottingPlan(filtered);
   const dep=filtered.filter(f=>f.__direction==='dep'), arr=filtered.filter(f=>f.__direction==='arr');
   app.innerHTML=`
@@ -141,7 +148,7 @@ function render(){
     ${!state.loading && !filtered.length ? '<div class="empty"><b>没有符合条件的航班</b><span>试试关闭“只看宽体”或换一天</span></div>' : ''}
 ${state.detailFlight ? detailModal(state.detailFlight) : ''}
     <div class="flight-list">${state.direction!=='arr' ? section('出发',dep) : ''}${state.direction!=='dep' ? section('到达',arr) : ''}</div>
-    <footer>数据源：AeroDataBox · 默认隐藏代码共享重复航班 · 更新时间来自数据源</footer>
+    <footer>数据源：AeroDataBox · 默认隐藏代码共享重复航班 · 3天观机计划跟随当前筛选条件</footer>
   </main>`;
   bind();
 }
@@ -153,7 +160,7 @@ function detailModal(f){
 function spottingOverview(){
   const days=[0,1,2].map(i=>{
     const d=dayLabel(i);
-    const list=state.dayFlights[d.iso]||[];
+    const list=filterFlights(state.dayFlights[d.iso]||[]);
     const p=spottingPlan(list);
     if(!p.length) return '';
     return '<div class="spot-day"><b>'+d.label+' · '+d.iso.slice(5).replace('-','/')+' 周'+d.wd+'</b>'+
