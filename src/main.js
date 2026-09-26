@@ -218,8 +218,10 @@ function render(){
         <button class="chip ${state.special?"on":""}" id="special">🎨 只看彩绘</button>
         <button class="chip ${state.showCodeshare?"on":""}" id="codeshare">显示共享</button>
       </div>
-      <div class="filter-line"><b>机型</b><div class="aircraft-filter"><button class="mini ${!state.aircraftTypes.length?"on":""}" data-type="">全部</button>${aircraftTypes.map(t=>`<button class="mini ${state.aircraftTypes.includes(t)?"on":""}" data-type="${esc(t)}">${esc(t)}</button>`).join("")}</div></div>
-      <div class="filter-line"><b>航司</b><div class="aircraft-filter"><button class="mini ${!state.selectedAirlines.length?"on":""}" data-airline="">全部</button>${airlines.map(a=>`<button class="mini ${state.selectedAirlines.includes(a)?"on":""}" data-airline="${esc(a)}">${esc(a)}</button>`).join("")}</div></div>
+      <div class="filter-select-row">
+        <label class="filter-select"><span>机型</span><select id="aircraftSelect"><option value="">全部机型</option>${aircraftTypes.map(t=>`<option value="${esc(t)}" ${state.aircraftTypes.includes(t)?"selected":""}>${esc(t)}</option>`).join("")}</select></label>
+        <label class="filter-select"><span>航司</span><select id="airlineSelect"><option value="">全部航司</option>${airlines.map(a=>`<option value="${esc(a)}" ${state.selectedAirlines.includes(a)?"selected":""}>${esc(a)}</option>`).join("")}</select></label>
+      </div>
       <div class="compact-search-row">
         <label class="field search-field"><span>搜索</span><input id="q" placeholder="航班号 / 机型" value="${esc(state.q)}"></label>
         <label class="field compact-time-field"><span>时间</span><div class="time-pair"><input id="timeFrom" type="time" value="${state.timeFrom}"><i>—</i><input id="timeTo" type="time" value="${state.timeTo}"></div></label>
