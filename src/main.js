@@ -255,17 +255,23 @@ function spottingOverview(){
     state.timeTo!=='23:59'
   );
   if(!hasActiveFilter) return '';
-  const days=[0,1,2].map(i=>{
-    const d=dayLabel(i);
-    const list=filterFlights(state.dayFlights[d.iso]||[]);
-    const p=spottingPlan(list);
-    if(!p.length) return '';
-    return '<div class="spot-day"><b>'+d.label+' · '+d.iso.slice(5).replace('-','/')+' 周'+d.wd+'</b>'+
-      p.map(x=>'<div class="spot-window"><div><b>'+x.from+'–'+x.to+'</b><small>'+x.count+' 个航班</small></div><div class="spot-tags">'+
-      (x.wide?'<span>宽体 '+x.wide+'</span>':'')+(x.livery?'<span class="livery">🎨 彩绘 '+x.livery+'</span>':'')+
-      '</div></div>').join('')+'</div>';
+  const d=dayLabel(state.activeDay);
+  const list=filterFlights(state.dayFlights[d.iso]||[]);
+  if(!list.length) return '';
+  const rows=[...list].sort((a,b)=>timeOf(a).localeCompare(timeOf(b))).map(f=>{
+    const info=aircraftDisplay(f);
+    const wide=isWide(info.current);
+    const l=liveryOf(f);
+    const route=f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure');
+    return '<div class="spot-flight">'+
+      '<time>'+esc(timeOf(f))+'</time>'+
+      '<div class="spot-flight-main"><b>'+esc(numberOf(f))+'</b><span>'+esc(airlineOf(f))+'</span></div>'+
+      '<div class="spot-flight-route">'+esc(route)+'</div>'+
+      '<div class="spot-flight-aircraft"><b>'+esc(info.current)+'</b>'+(wide?'<small>宽体</small>':'')+(l?'<small class="livery">🎨 '+esc(l.rarity)+'</small>':'')+'</div>'+
+      (info.registration?'<small class="spot-reg">'+esc(info.registration)+'</small>':'')+
+      '</div>';
   }).join('');
-  return '<details class="spotting" '+(state.spottingOpen?'open':'')+'><summary class="spotting-head"><b>👀 3天观机计划</b><span>按 2 小时窗口汇总</span><i>⌄</i></summary><div class="spotting-body">'+days+'</div></details>';
+  return '<section class="spotting"><div class="spotting-head"><b>👀 观机计划</b><span>'+esc(d.label)+' · '+esc(d.iso.slice(5).replace('-','/'))+' · '+list.length+' 架</span></div><div class="spotting-body">'+rows+'</div></section>';
 }
 function spottingPlan(list){
   const windows=[];
