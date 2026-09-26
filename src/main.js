@@ -24,7 +24,6 @@ const state = {
   aircraftTypes: [],
   selectedAirlines: [],
   showCodeshare: false,
-  airline: 'all',
   q: '',
   timeFrom: '00:00',
   timeTo: '23:59',
@@ -64,6 +63,11 @@ function aircraftInfo(f){
   return {current,level,registration,updated:f?.lastUpdatedUtc||'',conflict:Boolean(f?.__aircraftConflict)};
 }
 function aircraftDisplay(f){ return aircraftInfo(f); }
+
+function flightIdentity(f){
+  const info=aircraftInfo(f);
+  return info.registration || [numberOf(f),f?.__direction,timeOf(f)].join('|');
+}
 function liveryOf(f){
   const registration=aircraftInfo(f).registration;
   const registry=liveryForRegistration(registration);
@@ -161,8 +165,8 @@ function spottingPlan(list){
 function section(title,list){
   if(!list.length) return '';
   return `<section class="group"><h2>${title}<em>${list.length}</em></h2>${list.sort((a,b)=>timeOf(a).localeCompare(timeOf(b))).map(f=>{
-    const info=aircraftDisplay(f), type=info.current, wide=isWide(type);
-    return `<article class="flight ${wide?'is-wide':''}">
+    const info=aircraftDisplay(f), type=info.current, wide=isWide(type), identity=flightIdentity(f);
+    return `<article class="flight ${wide?'is-wide':''}" data-flight-id="${esc(identity)}">
       <time>${timeOf(f)}</time>
       <div class="route"><b>${esc(numberOf(f))}</b><span>${esc(airlineOf(f))}</span></div>
       <div class="to">${esc(f.__direction==='dep'?cityOf(f,'arrival'):cityOf(f,'departure'))}</div>
