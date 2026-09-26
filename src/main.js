@@ -180,12 +180,12 @@ function bind(){
   document.querySelector('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'){state.detailFlight=null;render();}});
 }
 async function fetchDay(date){
-  const key=`aero:${state.airport}:${date}`;
+  const key=`aero:${state.airport}:${date}:${state.showCodeshare}`;
   try{
     const cached=JSON.parse(localStorage.getItem(key)||'null');
     if(cached?.savedAt && Date.now()-cached.savedAt<10*60*1000){const flights=cached.flights||[];flights.__fetchedAt=cached.fetchedAt||'';return flights;}
   }catch{}
-  const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(date)}`);
+  const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(date)}&showCodeshare=${state.showCodeshare}`);
   const data=await r.json();
   if(!r.ok) throw new Error(data.error||'读取航班失败');
   const flights=[
