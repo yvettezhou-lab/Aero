@@ -1,5 +1,6 @@
 import './style.css';
 import { liveryForRegistration } from './data/liveries.js';
+import { aircraftOverrideFor } from './data/aircraftOverrides.js';
 
 const AIRPORTS = [
   ['KMG','Kunming Changshui','Kunming',24.9924,102.7435],['PEK','Beijing Capital','Beijing',40.0799,116.6031],['PKX','Beijing Daxing','Beijing',39.5098,116.4105],
@@ -356,7 +357,17 @@ async function fetchDay(date,force=false){
   const flights=[
     ...(data.departures||[]).map(f=>({...f,__direction:'dep'})),
     ...(data.arrivals||[]).map(f=>({...f,__direction:'arr'}))
-  ];
+  ].map(f=>{
+    const override=aircraftOverrideFor(state.airport,date,f.__direction,numberOf(f));
+    if(!override) return f;
+    return {
+      ...f,
+      aircraft:{...(f.aircraft||{}),model:override.model,reg:override.registration},
+      registration:override.registration,
+      __aircraftOverride:true,
+      __aircraftOverrideSource:override.source
+    };
+  });
   flights.__fetchedAt=data.fetchedAt||'';
   flights.__secondSource=data.secondSource||null;
   try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights, fetchedAt:data.fetchedAt||'',secondSource:data.secondSource||null}));}catch{}
