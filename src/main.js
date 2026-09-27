@@ -482,7 +482,7 @@ function openConfirm(f,date=state.date){
   document.querySelector('#logFilterAirport')?.addEventListener('change',e=>{state.spottingLogFilterAirport=e.target.value;localStorage.setItem('aero-spotting-log-filter-airport',state.spottingLogFilterAirport);render();});
   document.querySelector('#logSettings')?.addEventListener('click',e=>{e.stopPropagation();document.querySelector('#logSettingsMenu')?.classList.toggle('open');});
   document.querySelector('#logSettingsMenu')?.addEventListener('click',e=>e.stopPropagation());
-  document.querySelector('#clearLog')?.addEventListener('click',()=>{if(window.confirm('Clear all spotting records, confirmations, and saved targets? This cannot be undone.')){state.spottingLog=[];state.confirmations={};state.targets=[];state.spottingLogHistory=false;saveSpottingLog();saveConfirmations();saveTargets();localStorage.setItem('aero-spotting-log-history','0');render();}});
+  document.querySelector('#clearLog')?.addEventListener('click',()=>{if(window.confirm('Clear all spotting records, confirmations, and saved targets? This cannot be undone.')){state.spottingLog=[];state.spottingLogHistory=false;saveSpottingLog();localStorage.setItem('aero-spotting-log-history','0');render();}});
   document.querySelector('#exportAeroData')?.addEventListener('click',()=>{aeroExportData();document.querySelector('#logSettingsMenu')?.classList.remove('open');});
   document.querySelector('#importAeroData')?.addEventListener('click',()=>{document.querySelector('#importAeroFile')?.click();});
   document.querySelector('#importAeroFile')?.addEventListener('change',e=>{aeroImportData(e.target.files?.[0]);e.target.value='';document.querySelector('#logSettingsMenu')?.classList.remove('open');});
