@@ -354,10 +354,10 @@ function render(){
       </div>
     </section>
 
-    <div class="summary"><strong>${filtered.length}</strong> flights <span>·</span> ${state.widebody?'Widebody filtered':'All Aircraft'} ${state.loading?'· Updating…':''}</div>
+    <div class="summary"><strong>${filtered.length}</strong> flights <span>·</span> ${state.special?'Special Livery filtered':state.widebody?'Widebody filtered':state.aircraftTypes.length?'Aircraft filtered':state.selectedAirlines.length?'Airline filtered':'All Aircraft'} ${state.loading?'· Updating…':''}</div>
     ${spottingOverview()}\n    ${spottingLogCard()}\n    <div class="flight-tabs" role="tablist" aria-label="Flight list">\n      <button class="${state.listDirection==="dep"?"on":""}" data-dir="dep">Departures <span>${depCount}</span></button>\n      <button class="${state.listDirection==="arr"?"on":""}" data-dir="arr">Arrivals <span>${arrCount}</span></button>\n    </div>\n    ${state.error ? `<div class="notice error">${esc(state.error)}</div>` : ''}
     ${state.loading && !state.flights.length ? '<div class="empty">Loading flights…</div>' : ''}
-    ${!state.loading && !filtered.length ? '<div class="empty"><b>No matching flights</b><span>试试关闭“Widebody Only”或换一天</span></div>' : ''}
+    ${!state.loading && !filtered.length ? (()=>{const active=[];if(state.widebody)active.push('Widebody Only');if(state.special)active.push('Special Livery');if(state.aircraftTypes.length)active.push('Aircraft');if(state.selectedAirlines.length)active.push('Airline');if(state.q.trim())active.push('Search');const hint=active.length?`Try adjusting ${active.join(', ')} or choose another day.`:'Try another day.';return `<div class="empty"><b>No matching flights</b><span>${esc(hint)}</span></div>`})() : ''}
 ${state.detailFlight ? detailModal(state.detailFlight) : ''}
     <div class="flight-list">${state.listDirection==='dep' ? section('Departures',dep) : section('Arrivals',arr)}</div>
     ${sourceFooter()}
