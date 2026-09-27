@@ -248,7 +248,7 @@ function spottingLogCard(){
     '<button class="log-filter-clear '+(hasLogFilter?'active':'')+'" id="clearLogFilters">Clear filters</button></div>'+historyHtml+'</div>';
   const body=state.spottingLogOpen
     ? '<div class="log-today">'+formatRows(today)+'</div>'+
-      '<div class="log-actions">'+(allHistory.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'View less':'View all')+'</button>':'')+'<button class="log-settings" id="logSettings" aria-label="Spotting log settings">⚙</button></div>'+
+      '<div class="log-actions">'+(allHistory.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'View less':'View all')+'</button>':'')+'<button class="log-settings" id="logSettings" aria-label="Spotting log settings">⚙︎</button></div>'+
       '<div class="log-settings-menu" id="logSettingsMenu"><button id="exportAeroData">Export data</button><button id="importAeroData">Import data</button><button id="clearLog" class="danger">Clear all</button><input id="importAeroFile" type="file" accept=".json,application/json" hidden></div>'+
       (state.spottingLogHistory ? filterPanel : '')
     : '';
