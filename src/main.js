@@ -13,6 +13,40 @@ const AIRPORTS = [
 
 const WIDEBODY = /\b(?:A300|A310|A330|A340|A350|A380|B747|B767|B77[0-9]|B78[0-9]|DC10|MD11|IL96|L1011)\b|\b(?:Airbus\s+)?A(?:300|310|330|340|350|380)(?:[- ]?[0-9]+)?\b|\b(?:Boeing\s+)?(?:747|767|77[0-9]|78[0-9])(?:[- ]?[0-9]+)?\b/i;
 
+const AIRPORT_TIMEZONES = {
+  KMG:'Asia/Shanghai',PEK:'Asia/Shanghai',PKX:'Asia/Shanghai',PVG:'Asia/Shanghai',SHA:'Asia/Shanghai',
+  CAN:'Asia/Shanghai',SZX:'Asia/Shanghai',TFU:'Asia/Shanghai',HKG:'Asia/Hong_Kong',SIN:'Asia/Singapore',
+  BKK:'Asia/Bangkok',KUL:'Asia/Kuala_Lumpur',NRT:'Asia/Tokyo',HND:'Asia/Tokyo',ICN:'Asia/Seoul',
+  TPE:'Asia/Taipei',MNL:'Asia/Manila'
+};
+
+function airportTimeZone(code='KMG'){ return AIRPORT_TIMEZONES[code] || 'UTC'; }
+function airportLocalParts(code='KMG'){
+  const parts=new Intl.DateTimeFormat('en-CA',{
+    timeZone:airportTimeZone(code),
+    year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false
+  }).formatToParts(new Date());
+  const out={};
+  for(const p of parts) out[p.type]=p.value;
+  return out;
+}
+function airportToday(code=state?.airport||'KMG'){
+  const p=airportLocalParts(code);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+function addLocalDays(iso,days){
+  const [y,m,d]=iso.split('-').map(Number);
+  const x=new Date(Date.UTC(y,m-1,d+days,12));
+  return x.toISOString().slice(0,10);
+}
+function flightDataMode(date){
+  const today=airportToday();
+  const tomorrow=addLocalDays(today,1);
+  if(date===today) return 'actual';
+  if(date===tomorrow) return Number(airportLocalParts().hour)>=18 ? 'actual' : 'schedule';
+  return 'schedule';
+}
+
 const state = {
   airport: localStorage.getItem('aero-airport') || 'KMG',
   date: localISO(),
@@ -526,7 +560,9 @@ function openConfirm(f,date=state.date){
   document.querySelector('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'){state.detailFlight=null;render();}});
 }
 async function fetchDay(date,force=false){
-  const key=`aero:${state.airport}:${date}:${state.showCodeshare}`;
+  const mode=flightDataMode(date);
+  // Cache by data layer so tomorrow automatically switches from schedule to live after 18:00.
+  const key=`aero:${state.airport}:${date}:${state.showCodeshare}:${mode}`;
   try{
     const cached=JSON.parse(localStorage.getItem(key)||'null');
     if(!force && cached?.savedAt){
@@ -543,10 +579,11 @@ async function fetchDay(date,force=false){
       });
       flights.__fetchedAt=cached.fetchedAt||'';
       flights.__secondSource=cached.secondSource||null;
+      flights.__dataMode=cached.dataMode||mode;
       return flights;
     }
   }catch{}
-  const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(date)}&showCodeshare=${state.showCodeshare}`);
+  const r=await fetch(`/api/flights?airport=${encodeURIComponent(state.airport)}&date=${encodeURIComponent(date)}&showCodeshare=${state.showCodeshare}&mode=${mode}`);
   const data=await r.json();
   if(!r.ok) throw new Error(data.error||'Failed to load flights');
   const flights=[
@@ -565,7 +602,8 @@ async function fetchDay(date,force=false){
   });
   flights.__fetchedAt=data.fetchedAt||'';
   flights.__secondSource=data.secondSource||null;
-  try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights, fetchedAt:data.fetchedAt||'',secondSource:data.secondSource||null}));}catch{}
+  flights.__dataMode=data.dataMode||mode;
+  try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights, fetchedAt:data.fetchedAt||'',secondSource:data.secondSource||null,dataMode:data.dataMode||mode}));}catch{}
   return flights;
 }
 async function loadRange(force=false){
@@ -575,7 +613,7 @@ async function loadRange(force=false){
   results.forEach((r,i)=>{
     if(r.status==='fulfilled'){
       state.dayFlights[dates[i]]=r.value;
-      state.sourceMeta[dates[i]]={secondSource:r.value.__secondSource||null,fetchedAt:r.value.__fetchedAt||''};
+      state.sourceMeta[dates[i]]={secondSource:r.value.__secondSource||null,fetchedAt:r.value.__fetchedAt||'',dataMode:r.value.__dataMode||flightDataMode(dates[i])};
     }
   });
   const failed=results.filter(r=>r.status==='rejected').length;
