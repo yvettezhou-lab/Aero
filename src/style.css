@@ -81,3 +81,6 @@
 .log-summary span{font-size:10px!important;color:#9aa0a8!important;margin:0!important;white-space:nowrap}
 .log-head .log-summary .log-chevron{margin:0;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#f5f6f7;font-size:13px;color:#747b84;line-height:1;flex:0 0 28px}
 .log-head>div.log-summary::before{display:none}
+
+.log-data-actions{display:flex;justify-content:center;gap:8px;padding:4px 14px 12px}
+.log-data-actions button{border:1px solid #e1e5ea;background:#fafbfc;color:#66707c;border-radius:9px;padding:6px 11px;font-size:10px}
