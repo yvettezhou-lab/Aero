@@ -3,6 +3,18 @@
 // rarity is intentionally simple: 稀有 / 少见 / 常见.
 
 export const LIVERIES = {
+  "B-226N": {
+    name: "百年吉祥·花见神州",
+    rarity: "稀有",
+    airline: "吉祥航空",
+    source: "Flightradar24 / Planespotters"
+  },
+  "B-209R": {
+    name: "梦旅生花·中国牡丹",
+    rarity: "少见",
+    airline: "吉祥航空",
+    source: "Flightradar24 / Planespotters"
+  },
   "B-1788": {
     name: "云南孔雀号",
     rarity: "稀有",
