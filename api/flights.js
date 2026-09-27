@@ -31,7 +31,7 @@ function faToFlight(x,direction){
   };
 }
 export default async function handler(req,res){
-  const {airport,date,showCodeshare}=req.query;
+  const {airport,date,showCodeshare,mode}=req.query;
   const key=process.env.AERODATABOX_API_KEY;
   if(!key) return res.status(500).json({error:'API Key 尚未配置'});
   if(!airport||!date) return res.status(400).json({error:'缺少机场或日期'});
@@ -69,6 +69,6 @@ export default async function handler(req,res){
         secondSource={enabled:true,ok:true,matched:fd2.length+fa2.length};
       }catch(e){secondSource={enabled:true,ok:false,error:e.message};}
     }
-    return res.status(200).json({departures,arrivals,source:'AeroDataBox',secondSource,fetchedAt:new Date().toISOString()});
+    return res.status(200).json({departures,arrivals,source:'AeroDataBox',secondSource,dataMode:mode||'schedule',fetchedAt:new Date().toISOString()});
   }catch(e){return res.status(502).json({error:e.message||'服务器请求航班数据失败'});}
 }
