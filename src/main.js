@@ -175,8 +175,9 @@ function markSeen(f){
   render();
 }
 function spottingLogCard(){
-  const today=state.spottingLog.filter(x=>x.airport===state.airport&&x.date===state.date);
-  const history=state.spottingLog.filter(x=>x.airport===state.airport&&x.date<state.date);
+  const todayDate=localISO();
+  const today=state.spottingLog.filter(x=>x.airport===state.airport&&x.date===todayDate);
+  const history=state.spottingLog.filter(x=>x.airport===state.airport&&x.date<todayDate);
   const formatRows=(rows)=>rows.length
     ? '<div class="log-list">'+[...rows].reverse().map(x=>'<div class="log-row"><div><b>'+esc(x.number)+'</b><span>'+esc(x.airport)+' · '+esc(x.date.slice(5).replace('-','/'))+'</span></div><div><strong>'+esc(x.type)+'</strong>'+(x.registration?'<small>'+esc(x.registration)+'</small>':'')+(x.livery?'<em>🎨 '+esc(x.livery)+' · '+esc(x.rarity||'Uncommon')+'</em>':'')+'</div></div>').join('')+'</div>'
     : '<div class="log-empty">No flights logged today.</div>';
