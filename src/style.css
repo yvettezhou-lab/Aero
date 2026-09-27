@@ -112,3 +112,7 @@
 .log-filter-check span{font-size:10px!important;color:#59626d!important}
 .log-filter-clear{align-self:end;border:1px solid #e1e5ea;background:#f7f8fa;color:#68717c;border-radius:9px;padding:7px 9px;font-size:10px}
 .log-filter-clear.active{background:#eef3f8;color:#496b8f;border-color:#dce6f1}
+
+.log-row>div:first-child span{display:block;font-size:10px;color:#9aa1aa;margin-top:3px}
+.log-livery{border:0;background:transparent;padding:1px 3px;font-size:16px;line-height:1;vertical-align:middle;cursor:pointer}
+.log-livery-name{display:block;font-size:10px;color:#66707b;margin-top:4px}
