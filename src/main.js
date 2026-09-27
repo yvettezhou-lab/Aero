@@ -287,7 +287,7 @@ function normalizeDeg(deg){return ((deg%360)+360)%360;}
 function likelyRunway(airport,windFrom){
   const axes=RUNWAY_AXES[airport];
   if(!axes||!Number.isFinite(windFrom)) return null;
-  const landingHeading=normalizeDeg(windFrom+180);
+  const landingHeading=normalizeDeg(windFrom);
   const best=axes.reduce((acc,axis)=>{
     const h=axis.headings.reduce((bestHeading,h)=>{
       const diff=Math.abs(normalizeDeg(landingHeading-h));
