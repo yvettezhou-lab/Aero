@@ -25,6 +25,9 @@ const state = {
   spottingLogHistory: localStorage.getItem('aero-spotting-log-history') === '1',
   spottingLogFilterDate: localStorage.getItem('aero-spotting-log-filter-date') || '',
   spottingLogFilterAirport: localStorage.getItem('aero-spotting-log-filter-airport') || '',
+  spottingLogFilterAircraft: localStorage.getItem('aero-spotting-log-filter-aircraft') || '',
+  spottingLogFilterLivery: localStorage.getItem('aero-spotting-log-filter-livery') || '',
+  spottingLogFilterSearch: localStorage.getItem('aero-spotting-log-filter-search') || '',
   widebody: false,
   special: false,
   aircraftTypes: [],
@@ -218,22 +221,30 @@ function spottingLogCard(){
   const todayDate=localISO();
   const today=state.spottingLog.filter(x=>x.airport===state.airport&&x.date===todayDate);
   const allHistory=state.spottingLog.filter(x=>x.date<todayDate);
-  const filteredHistory=allHistory.filter(x=>(!state.spottingLogFilterDate||x.date===state.spottingLogFilterDate)&&(!state.spottingLogFilterAirport||x.airport===state.spottingLogFilterAirport));
+  const filteredHistory=allHistory.filter(x=>
+    (!state.spottingLogFilterDate||x.date===state.spottingLogFilterDate)&&
+    (!state.spottingLogFilterAirport||x.airport===state.spottingLogFilterAirport)&&
+    (!state.spottingLogFilterAircraft||x.type===state.spottingLogFilterAircraft)&&
+    (!state.spottingLogFilterLivery||Boolean(x.livery)===true)&&
+    (!state.spottingLogFilterSearch||String(x.number||'').toLowerCase().includes(state.spottingLogFilterSearch.toLowerCase())||String(x.registration||'').toLowerCase().includes(state.spottingLogFilterSearch.toLowerCase()))
+  );
   const formatRows=(rows)=>rows.length
     ? '<div class="log-list">'+[...rows].reverse().map(x=>'<div class="log-row"><div><b>'+esc(x.number)+'</b><span>'+esc(x.airport)+' · '+esc(x.date.slice(5).replace('-','/'))+'</span></div><div><strong>'+esc(x.type)+'</strong>'+(x.registration?'<small>'+esc(x.registration)+'</small>':'')+(x.livery?'<em>🎨 '+esc(x.livery)+' · '+esc(x.rarity||'Uncommon')+'</em>':'')+'</div></div>').join('')+'</div>'
     : '<div class="log-empty">No matching spotting records.</div>';
   const dates=[...new Set(filteredHistory.map(x=>x.date))].sort((a,b)=>b.localeCompare(a));
   const dateOptions=[...new Set(allHistory.map(x=>x.date))].sort((a,b)=>b.localeCompare(a));
   const airportOptions=[...new Set(allHistory.map(x=>x.airport))].sort();
+  const aircraftOptions=[...new Set(allHistory.map(x=>x.type).filter(Boolean))].sort();
+  const hasLogFilter=Boolean(state.spottingLogFilterDate||state.spottingLogFilterAirport||state.spottingLogFilterAircraft||state.spottingLogFilterLivery||state.spottingLogFilterSearch);
   const historyHtml=filteredHistory.length
     ? '<div class="log-history">'+dates.map(date=>'<div class="log-date"><b>'+esc(date.slice(5).replace('-','/'))+'</b><span>'+filteredHistory.filter(x=>x.date===date).length+' logged</span></div>'+formatRows(filteredHistory.filter(x=>x.date===date))).join('')+'</div>'
     : '<div class="log-empty">No matching spotting records.</div>';
   const body=state.spottingLogOpen
     ? '<div class="log-today">'+formatRows(today)+'</div>'+
-      '<div class="log-actions">'+(allHistory.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'Hide earlier':'View all')+'</button>':'')+'<button class="log-settings" id="logSettings" aria-label="Spotting log settings">⚙︎</button></div>'+
+      '<div class="log-actions">'+(allHistory.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'View less':'View all')+'</button>':'')+'<button class="log-settings" id="logSettings" aria-label="Spotting log settings">⚙︎</button></div>'+
       '<div class="log-settings-menu" id="logSettingsMenu"><button id="exportAeroData">Export data</button><button id="importAeroData">Import data</button><button id="clearLog" class="danger">Clear all</button><input id="importAeroFile" type="file" accept=".json,application/json" hidden></div>'+
       (state.spottingLogHistory
-        ? '<div class="log-history-wrap"><div class="log-filters"><label><span>Date</span><select id="logFilterDate"><option value="">All dates</option>'+dateOptions.map(d=>'<option value="'+esc(d)+'" '+(state.spottingLogFilterDate===d?'selected':'')+'>'+esc(d.slice(5).replace('-','/'))+'</option>').join('')+'</select></label><label><span>Airport</span><select id="logFilterAirport"><option value="">All airports</option>'+airportOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAirport===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</select></label></div>'+historyHtml+'</div>'
+        ? '<div class="log-history-wrap"><div class="log-filters"><label><span>Date</span><select id="logFilterDate"><option value="">All dates</option>'+dateOptions.map(d=>'<option value="'+esc(d)+'" '+(state.spottingLogFilterDate===d?'selected':'')+'>'+esc(d.slice(5).replace('-','/'))+'</option>').join('')+'</select></label><label><span>Aircraft</span><select id="logFilterAircraft"><option value="">All aircraft</option>'+aircraftOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAircraft===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</select></label><label><span>Airport</span><select id="logFilterAirport"><option value="">All airports</option>'+airportOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAirport===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</select></label><label><span>Flight / Reg.</span><input id="logFilterSearch" placeholder="e.g. MU5811" value="'+esc(state.spottingLogFilterSearch)+'"></label><label class="log-filter-check"><input id="logFilterLivery" type="checkbox" '+(state.spottingLogFilterLivery?'checked':'')+'><span>Special livery only</span></label><button class="log-filter-clear '+(hasLogFilter?'active':'')" id="clearLogFilters">Clear filters</button></div>'+historyHtml+'</div>'
         : '')
     : '';
   return '<section class="log-card '+(state.spottingLogOpen?'open':'')+'"><button class="log-head" id="toggleLog" aria-expanded="'+(state.spottingLogOpen?'true':'false')+'"><div class="log-title"><b>My Spotting Log</b></div><div class="log-summary"><span>'+today.length+' logged today</span><i class="log-chevron">'+(state.spottingLogOpen?'⌃':'⌄')+'</i></div></button>'+body+'</section>';
@@ -480,8 +491,13 @@ function openConfirm(f,date=state.date){
   document.querySelector('#viewAllLog')?.addEventListener('click',e=>{e.stopPropagation();state.spottingLogHistory=!state.spottingLogHistory;if(!state.spottingLogHistory){state.spottingLogFilterDate='';state.spottingLogFilterAirport='';localStorage.removeItem('aero-spotting-log-filter-date');localStorage.removeItem('aero-spotting-log-filter-airport');}localStorage.setItem('aero-spotting-log-history',state.spottingLogHistory?'1':'0');render();});
   document.querySelector('#logFilterDate')?.addEventListener('change',e=>{state.spottingLogFilterDate=e.target.value;localStorage.setItem('aero-spotting-log-filter-date',state.spottingLogFilterDate);render();});
   document.querySelector('#logFilterAirport')?.addEventListener('change',e=>{state.spottingLogFilterAirport=e.target.value;localStorage.setItem('aero-spotting-log-filter-airport',state.spottingLogFilterAirport);render();});
+  document.querySelector('#logFilterAircraft')?.addEventListener('change',e=>{state.spottingLogFilterAircraft=e.target.value;localStorage.setItem('aero-spotting-log-filter-aircraft',state.spottingLogFilterAircraft);render();});
+  document.querySelector('#logFilterLivery')?.addEventListener('change',e=>{state.spottingLogFilterLivery=e.target.checked?'1':'';localStorage.setItem('aero-spotting-log-filter-livery',state.spottingLogFilterLivery);render();});
+  document.querySelector('#logFilterSearch')?.addEventListener('input',e=>{state.spottingLogFilterSearch=e.target.value;localStorage.setItem('aero-spotting-log-filter-search',state.spottingLogFilterSearch);render();});
+  document.querySelector('#clearLogFilters')?.addEventListener('click',()=>{state.spottingLogFilterDate='';state.spottingLogFilterAirport='';state.spottingLogFilterAircraft='';state.spottingLogFilterLivery='';state.spottingLogFilterSearch='';['date','airport','aircraft','livery','search'].forEach(k=>localStorage.removeItem('aero-spotting-log-filter-'+k));render();});
   document.querySelector('#logSettings')?.addEventListener('click',e=>{e.stopPropagation();document.querySelector('#logSettingsMenu')?.classList.toggle('open');});
   document.querySelector('#logSettingsMenu')?.addEventListener('click',e=>e.stopPropagation());
+  document.addEventListener('click',e=>{const menu=document.querySelector('#logSettingsMenu'),gear=document.querySelector('#logSettings');if(menu?.classList.contains('open')&&!menu.contains(e.target)&&!gear?.contains(e.target))menu.classList.remove('open');},{once:true});
   document.querySelector('#clearLog')?.addEventListener('click',()=>{if(window.confirm('Clear all spotting records, confirmations, and saved targets? This cannot be undone.')){state.spottingLog=[];state.spottingLogHistory=false;saveSpottingLog();localStorage.setItem('aero-spotting-log-history','0');render();}});
   document.querySelector('#exportAeroData')?.addEventListener('click',()=>{aeroExportData();document.querySelector('#logSettingsMenu')?.classList.remove('open');});
   document.querySelector('#importAeroData')?.addEventListener('click',()=>{document.querySelector('#importAeroFile')?.click();});
