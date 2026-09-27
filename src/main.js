@@ -230,7 +230,8 @@ function spottingLogCard(){
     : '<div class="log-empty">No matching spotting records.</div>';
   const body=state.spottingLogOpen
     ? '<div class="log-today">'+formatRows(today)+'</div>'+
-      '<div class="log-actions">'+(allHistory.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'Hide earlier':'View all')+'</button>':'')+(state.spottingLog.length?'<button class="log-clear" id="clearLog">Clear all</button>':'')+'</div>'+
+      '<div class="log-actions">'+(allHistory.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'Hide earlier':'View all')+'</button>':'')+'<button class="log-settings" id="logSettings" aria-label="Spotting log settings">⚙︎</button></div>'+
+      '<div class="log-settings-menu" id="logSettingsMenu"><button id="exportAeroData">Export data</button><button id="importAeroData">Import data</button><button id="clearLog" class="danger">Clear all</button><input id="importAeroFile" type="file" accept=".json,application/json" hidden></div>'+
       (state.spottingLogHistory
         ? '<div class="log-history-wrap"><div class="log-filters"><label><span>Date</span><select id="logFilterDate"><option value="">All dates</option>'+dateOptions.map(d=>'<option value="'+esc(d)+'" '+(state.spottingLogFilterDate===d?'selected':'')+'>'+esc(d.slice(5).replace('-','/'))+'</option>').join('')+'</select></label><label><span>Airport</span><select id="logFilterAirport"><option value="">All airports</option>'+airportOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAirport===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</select></label></div>'+historyHtml+'</div>'
         : '')
@@ -479,10 +480,12 @@ function openConfirm(f,date=state.date){
   document.querySelector('#viewAllLog')?.addEventListener('click',e=>{e.stopPropagation();state.spottingLogHistory=!state.spottingLogHistory;if(!state.spottingLogHistory){state.spottingLogFilterDate='';state.spottingLogFilterAirport='';localStorage.removeItem('aero-spotting-log-filter-date');localStorage.removeItem('aero-spotting-log-filter-airport');}localStorage.setItem('aero-spotting-log-history',state.spottingLogHistory?'1':'0');render();});
   document.querySelector('#logFilterDate')?.addEventListener('change',e=>{state.spottingLogFilterDate=e.target.value;localStorage.setItem('aero-spotting-log-filter-date',state.spottingLogFilterDate);render();});
   document.querySelector('#logFilterAirport')?.addEventListener('change',e=>{state.spottingLogFilterAirport=e.target.value;localStorage.setItem('aero-spotting-log-filter-airport',state.spottingLogFilterAirport);render();});
-  document.querySelector('#clearLog')?.addEventListener('click',e=>{e.stopPropagation();if(window.confirm('Clear all spotting records?')){state.spottingLog=[];state.spottingLogHistory=false;saveSpottingLog();localStorage.setItem('aero-spotting-log-history','0');render();}});
-  document.querySelector('#exportAeroData')?.addEventListener('click',e=>{e.stopPropagation();aeroExportData();});
-  document.querySelector('#importAeroData')?.addEventListener('click',e=>{e.stopPropagation();document.querySelector('#importAeroFile')?.click();});
-  document.querySelector('#importAeroFile')?.addEventListener('change',e=>{e.stopPropagation();aeroImportData(e.target.files?.[0]);e.target.value='';});
+  document.querySelector('#logSettings')?.addEventListener('click',e=>{e.stopPropagation();document.querySelector('#logSettingsMenu')?.classList.toggle('open');});
+  document.querySelector('#logSettingsMenu')?.addEventListener('click',e=>e.stopPropagation());
+  document.querySelector('#clearLog')?.addEventListener('click',()=>{if(window.confirm('Clear all spotting records, confirmations, and saved targets? This cannot be undone.')){state.spottingLog=[];state.confirmations={};state.targets=[];state.spottingLogHistory=false;saveSpottingLog();saveConfirmations();saveTargets();localStorage.setItem('aero-spotting-log-history','0');render();}});
+  document.querySelector('#exportAeroData')?.addEventListener('click',()=>{aeroExportData();document.querySelector('#logSettingsMenu')?.classList.remove('open');});
+  document.querySelector('#importAeroData')?.addEventListener('click',()=>{document.querySelector('#importAeroFile')?.click();});
+  document.querySelector('#importAeroFile')?.addEventListener('change',e=>{aeroImportData(e.target.files?.[0]);e.target.value='';document.querySelector('#logSettingsMenu')?.classList.remove('open');});
   document.querySelectorAll('[data-seen]').forEach(b=>b.onclick=e=>{e.stopPropagation();const key=b.dataset.seen;const f=state.flights.find(x=>recordKey(x)===key);if(f)markSeen(f);});
   document.querySelector('#closeModal')?.addEventListener('click',()=>{state.detailFlight=null;render();});
   document.querySelector('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'){state.detailFlight=null;render();}});
