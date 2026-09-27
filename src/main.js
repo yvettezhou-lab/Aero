@@ -174,6 +174,44 @@ function markSeen(f){
   state.detailFlight=null;
   render();
 }
+function aeroExportData(){
+  const payload={
+    app:"Aero",
+    version:1,
+    exportedAt:new Date().toISOString(),
+    spottingLog:state.spottingLog,
+    confirmations:state.confirmations,
+    targets:state.targets
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const file=new File([blob],"aero-data-"+localISO()+".json",{type:"application/json"});
+  if(navigator.share&&navigator.canShare?.({files:[file]})){
+    navigator.share({title:"Aero Data",files:[file]}).catch(()=>{});
+    return;
+  }
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function aeroImportData(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const p=JSON.parse(reader.result);
+      if(!p||p.app!=="Aero") throw new Error("Invalid Aero data file");
+      if(Array.isArray(p.spottingLog)) state.spottingLog=p.spottingLog;
+      if(p.confirmations&&typeof p.confirmations==="object") state.confirmations=p.confirmations;
+      if(Array.isArray(p.targets)) state.targets=p.targets;
+      saveSpottingLog();saveConfirmations();saveTargets();
+      state.spottingLogHistory=false;
+      localStorage.setItem("aero-spotting-log-history","0");
+      render();
+      alert("Aero data imported successfully.");
+    }catch(e){alert("This is not a valid Aero data file.");}
+  };
+  reader.readAsText(file);
+}
 function spottingLogCard(){
   const todayDate=localISO();
   const today=state.spottingLog.filter(x=>x.airport===state.airport&&x.date===todayDate);
@@ -188,6 +226,7 @@ function spottingLogCard(){
   const body=state.spottingLogOpen
     ? '<div class="log-today">'+formatRows(today)+'</div>'+
       '<div class="log-actions">'+(history.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'Hide earlier':'View all')+'</button>':'')+(state.spottingLog.length?'<button class="log-clear" id="clearLog">Clear all</button>':'')+'</div>'+
+      '<div class="log-data-actions"><button id="exportAeroData">Export data</button><button id="importAeroData">Import data</button><input id="importAeroFile" type="file" accept=".json,application/json" hidden></div>'+
       (state.spottingLogHistory?'<div class="log-history-wrap">'+historyHtml+'</div>':'')
     : '';
   return '<section class="log-card '+(state.spottingLogOpen?'open':'')+'"><button class="log-head" id="toggleLog" aria-expanded="'+(state.spottingLogOpen?'true':'false')+'"><div class="log-title"><b>My Spotting Log</b></div><div class="log-summary"><span>'+today.length+' logged today</span><i class="log-chevron">'+(state.spottingLogOpen?'⌃':'⌄')+'</i></div></button>'+body+'</section>';
@@ -433,6 +472,9 @@ function openConfirm(f,date=state.date){
   document.querySelector('#toggleLog')?.addEventListener('click',()=>{state.spottingLogOpen=!state.spottingLogOpen;localStorage.setItem('aero-spotting-log-open',state.spottingLogOpen?'1':'0');render();});
   document.querySelector('#viewAllLog')?.addEventListener('click',e=>{e.stopPropagation();state.spottingLogHistory=!state.spottingLogHistory;localStorage.setItem('aero-spotting-log-history',state.spottingLogHistory?'1':'0');render();});
   document.querySelector('#clearLog')?.addEventListener('click',e=>{e.stopPropagation();if(window.confirm('Clear all spotting records?')){state.spottingLog=[];state.spottingLogHistory=false;saveSpottingLog();localStorage.setItem('aero-spotting-log-history','0');render();}});
+  document.querySelector('#exportAeroData')?.addEventListener('click',e=>{e.stopPropagation();aeroExportData();});
+  document.querySelector('#importAeroData')?.addEventListener('click',e=>{e.stopPropagation();document.querySelector('#importAeroFile')?.click();});
+  document.querySelector('#importAeroFile')?.addEventListener('change',e=>{e.stopPropagation();aeroImportData(e.target.files?.[0]);e.target.value='';});
   document.querySelectorAll('[data-seen]').forEach(b=>b.onclick=e=>{e.stopPropagation();const key=b.dataset.seen;const f=state.flights.find(x=>recordKey(x)===key);if(f)markSeen(f);});
   document.querySelector('#closeModal')?.addEventListener('click',()=>{state.detailFlight=null;render();});
   document.querySelector('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'){state.detailFlight=null;render();}});
