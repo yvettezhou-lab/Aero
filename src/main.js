@@ -20,7 +20,9 @@ const state = {
   days: 3,
   activeDay: 0,
   listDirection: 'dep',
-  spottingOpen: localStorage.getItem('aero-spotting-open') !== '0',
+  spottingOpen: localStorage.getItem('aero-spotting-open') === '1',
+  spottingLogOpen: localStorage.getItem('aero-spotting-log-open') === '1',
+  spottingLogHistory: localStorage.getItem('aero-spotting-log-history') === '1',
   widebody: false,
   special: false,
   aircraftTypes: [],
@@ -173,11 +175,21 @@ function markSeen(f){
   render();
 }
 function spottingLogCard(){
-  const recent=[...state.spottingLog].reverse().slice(0,8);
   const today=state.spottingLog.filter(x=>x.airport===state.airport&&x.date===state.date);
-  return '<section class="log-card"><div class="log-head"><div><b>📒 My Spotting Log</b><span>'+today.length+' logged</span></div><button class="log-clear" id="clearLog">Clear all</button></div>'+
-    (recent.length?'<div class="log-list">'+recent.map(x=>'<div class="log-row"><div><b>'+esc(x.number)+'</b><span>'+esc(x.airport)+' · '+esc(x.date.slice(5).replace('-','/'))+'</span></div><div><strong>'+esc(x.type)+'</strong>'+(x.registration?'<small>'+esc(x.registration)+'</small>':'')+(x.livery?'<em>🎨 '+esc(x.livery)+' · '+esc(x.rarity||'Uncommon')+'</em>':'')+'</div></div>').join('')+'</div>':'<div class="log-empty">After spotting a flight, tap “✓ Seen it” in its details to save a record.</div>')+
-    '</section>';
+  const history=state.spottingLog.filter(x=>x.airport===state.airport&&x.date<state.date);
+  const formatRows=(rows)=>rows.length
+    ? '<div class="log-list">'+[...rows].reverse().map(x=>'<div class="log-row"><div><b>'+esc(x.number)+'</b><span>'+esc(x.airport)+' · '+esc(x.date.slice(5).replace('-','/'))+'</span></div><div><strong>'+esc(x.type)+'</strong>'+(x.registration?'<small>'+esc(x.registration)+'</small>':'')+(x.livery?'<em>🎨 '+esc(x.livery)+' · '+esc(x.rarity||'Uncommon')+'</em>':'')+'</div></div>').join('')+'</div>'
+    : '<div class="log-empty">No flights logged today.</div>';
+  const dates=[...new Set(history.map(x=>x.date))].sort((a,b)=>b.localeCompare(a));
+  const historyHtml=dates.length
+    ? '<div class="log-history">'+dates.map(date=>'<div class="log-date"><b>'+esc(date.slice(5).replace('-','/'))+'</b><span>'+history.filter(x=>x.date===date).length+' logged</span></div>'+formatRows(history.filter(x=>x.date===date))).join('')+'</div>'
+    : '<div class="log-empty">No earlier spotting records.</div>';
+  const body=state.spottingLogOpen
+    ? '<div class="log-today">'+formatRows(today)+'</div>'+
+      '<div class="log-actions">'+(history.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'Hide earlier':'View all')+'</button>':'')+(state.spottingLog.length?'<button class="log-clear" id="clearLog">Clear all</button>':'')+'</div>'+
+      (state.spottingLogHistory?'<div class="log-history-wrap">'+historyHtml+'</div>':'')
+    : '';
+  return '<section class="log-card '+(state.spottingLogOpen?'open':'')+'"><button class="log-head" id="toggleLog" aria-expanded="'+(state.spottingLogOpen?'true':'false')+'"><div><b>📒 My Spotting Log</b><span>'+today.length+' logged today</span></div><span class="log-chevron">'+(state.spottingLogOpen?'⌃':'⌄')+'</span></button>'+body+'</section>';
 }
 function sourceFooter(){
   const meta=state.sourceMeta[state.date]?.secondSource;
@@ -233,7 +245,8 @@ function dayLabel(offset){
   const d=new Date(state.baseDate+'T12:00:00'); d.setDate(d.getDate()+offset);
   const iso=d.toISOString().slice(0,10);
   const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
-  return {iso,label:offset===0?'Today':offset===1?'Tomorrow':offset===2?'Day After Tomorrow':`${d.getMonth()+1}/${d.getDate()}`,wd};
+  const dateLabel=`${d.getMonth()+1}/${d.getDate()}`;
+  return {iso,label:offset===0?dateLabel:offset===1?'Tomorrow':offset===2?'Day After Tomorrow':dateLabel,wd};
 }
 function render(){
   const aircraftTypes=[...new Set(state.flights.map(f=>aircraftDisplay(f).current).filter(x=>x&&x!=='Unknown aircraft'))].sort();
@@ -416,7 +429,9 @@ function openConfirm(f,date=state.date){
     const target={id:'custom-'+Date.now(),name:name.trim(),filter:targetFilterSnapshot()};
     state.targets.push(target);state.targetId=target.id;saveTargets();render();
   });
-  document.querySelector('#clearLog')?.addEventListener('click',()=>{if(window.confirm('Clear all spotting records?')){state.spottingLog=[];saveSpottingLog();render();}});
+  document.querySelector('#toggleLog')?.addEventListener('click',()=>{state.spottingLogOpen=!state.spottingLogOpen;localStorage.setItem('aero-spotting-log-open',state.spottingLogOpen?'1':'0');render();});
+  document.querySelector('#viewAllLog')?.addEventListener('click',e=>{e.stopPropagation();state.spottingLogHistory=!state.spottingLogHistory;localStorage.setItem('aero-spotting-log-history',state.spottingLogHistory?'1':'0');render();});
+  document.querySelector('#clearLog')?.addEventListener('click',e=>{e.stopPropagation();if(window.confirm('Clear all spotting records?')){state.spottingLog=[];state.spottingLogHistory=false;saveSpottingLog();localStorage.setItem('aero-spotting-log-history','0');render();}});
   document.querySelectorAll('[data-seen]').forEach(b=>b.onclick=e=>{e.stopPropagation();const key=b.dataset.seen;const f=state.flights.find(x=>recordKey(x)===key);if(f)markSeen(f);});
   document.querySelector('#closeModal')?.addEventListener('click',()=>{state.detailFlight=null;render();});
   document.querySelector('#modal')?.addEventListener('click',e=>{if(e.target.id==='modal'){state.detailFlight=null;render();}});
