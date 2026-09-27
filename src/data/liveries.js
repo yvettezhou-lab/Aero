@@ -81,7 +81,6 @@ export const LIVERIES = {
     airline: "吉祥航空",
     source: "Flightradar24 aircraft record"
   },
-
   "B-1788": {
     name: "云南孔雀号",
     rarity: "稀有",
@@ -142,7 +141,6 @@ export const LIVERIES = {
     airline: "中国东方航空",
     source: "Planespotters / China Eastern"
   },
-
   "B-1625": {
     name: "中国国际消费品博览会",
     rarity: "少见",
@@ -203,7 +201,6 @@ export const LIVERIES = {
     airline: "中国南方航空",
     source: "Planespotters production record"
   },
-
   "B-308M": {
     name: "Star Alliance",
     rarity: "少见",
@@ -222,7 +219,6 @@ export const LIVERIES = {
     airline: "中国国际航空",
     source: "manually verified"
   },
-
   "B-5633": {
     name: "SkyTeam",
     rarity: "少见",
@@ -235,7 +231,6 @@ export const LIVERIES = {
     airline: "厦门航空",
     source: "Flightradar24 aircraft record"
   },
-
   "B-6388": {
     name: "中华龙号",
     rarity: "少见",
@@ -290,7 +285,6 @@ export const LIVERIES = {
     airline: "四川航空",
     source: "Flightradar24 aircraft record"
   },
-
   "B-1675": {
     name: "杭州2022亚运火炬号",
     rarity: "少见",
@@ -339,7 +333,6 @@ export const LIVERIES = {
     airline: "长龙航空",
     source: "Planespotters / JetPhotos"
   },
-
   "B-1982": {
     name: "DEEJ",
     rarity: "少见",
@@ -364,7 +357,6 @@ export const LIVERIES = {
     airline: "山东航空",
     source: "JetPhotos"
   },
-
   "B-5448": {
     name: "黄果树瀑布",
     rarity: "少见",
@@ -419,14 +411,12 @@ export const LIVERIES = {
     airline: "中国联合航空",
     source: "Flightradar24 aircraft record"
   },
-
   "B-6520": {
     name: "2026亚洲沙滩运动会",
     rarity: "稀有",
     airline: "海南航空",
     source: "Flightradar24 aircraft record"
   },
-
   "B-1228": {
     name: "第9999架波音737",
     rarity: "少见",
@@ -442,9 +432,20 @@ export const LIVERIES = {
 };
 
 export function normalizeRegistration(value = "") {
-  return String(value).replace(/\s+/g, "").toUpperCase();
+  return String(value).trim().replace(/\s+/g, "").toUpperCase();
+}
+
+function registrationKey(value = "") {
+  return normalizeRegistration(value).replace(/-/g, "");
 }
 
 export function liveryForRegistration(registration) {
-  return LIVERIES[normalizeRegistration(registration)] || null;
+  const normalized = normalizeRegistration(registration);
+  if (!normalized) return null;
+  if (LIVERIES[normalized]) return LIVERIES[normalized];
+  const key = registrationKey(normalized);
+  for (const [reg, livery] of Object.entries(LIVERIES)) {
+    if (registrationKey(reg) === key) return livery;
+  }
+  return null;
 }
