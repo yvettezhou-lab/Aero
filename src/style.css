@@ -36,3 +36,19 @@
 .manual-confirm-fields.hidden{display:none}.confirm-field input{font-size:16px;line-height:1.2}.confirm-sources input[type="checkbox"]{width:20px;height:20px;flex:0 0 20px}
 
 .confirm-field em{font-style:normal;color:#b0b4bb;font-size:9px}.confirm-actions .secondary{background:#f1f2f4;color:#626873;border-color:#e1e3e7}
+
+/* Spotting log: collapsed by default, today first, older records behind View all */
+.log-card{padding:0;overflow:hidden}
+.log-head{width:100%;border:0;background:transparent;text-align:left;cursor:pointer;margin:0;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.log-head>div{min-width:0}
+.log-head .log-chevron{font-size:16px;color:#8d939c;line-height:1}
+.log-card.open .log-head{border-bottom:1px solid #edf0f3}
+.log-today{padding:0 12px}
+.log-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:8px 12px 10px;border-top:1px solid #edf0f3}
+.log-view-all,.log-clear{border:0;background:#f1f2f4;border-radius:9px;padding:6px 9px;font-size:10px;color:#5e6670}
+.log-view-all{background:#eef3f8;color:#45678d}
+.log-history-wrap{border-top:1px solid #edf0f3;padding:0 12px 8px}
+.log-date{display:flex;justify-content:space-between;align-items:center;padding:10px 0 4px}
+.log-date b{font-size:11px}
+.log-date span{font-size:9px;color:#9297a0}
+.log-history-wrap .log-list{border-top:0}
