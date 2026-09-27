@@ -1,5 +1,5 @@
 import './style.css';
-import { liveryForRegistration } from './data/liveries.js';
+import { LIVERIES, liveryForRegistration } from './data/liveries.js';
 import { aircraftOverrideFor } from './data/aircraftOverrides.js';
 
 const AIRPORTS = [
@@ -45,6 +45,18 @@ function flightDataMode(date){
   if(date===today) return 'actual';
   if(date===tomorrow) return Number(airportLocalParts().hour)>=18 ? 'actual' : 'schedule';
   return 'schedule';
+}
+
+const LIVERY_AIRLINE_IATA = {
+  '吉祥航空':'HO','中国东方航空':'MU','中国南方航空':'CZ','中国国际航空':'CA',
+  '厦门航空':'MF','四川航空':'3U','长龙航空':'GJ','山东航空':'SC',
+  '中国联合航空':'KN','海南航空':'HU','奥凯航空':'BK','青岛航空':'QW'
+};
+function liveryRegsForFlights(list=[]){
+  const codes=new Set(list.map(f=>String(f?.airline?.iata||f?.airline?.icao||'').toUpperCase()).filter(Boolean));
+  return Object.entries(LIVERIES)
+    .filter(([,x])=>codes.has(LIVERY_AIRLINE_IATA[x.airline]))
+    .map(([reg])=>reg);
 }
 
 const state = {
@@ -600,11 +612,52 @@ async function fetchDay(date,force=false){
       __aircraftOverrideSource:override.source
     };
   });
-  flights.__fetchedAt=data.fetchedAt||'';
-  flights.__secondSource=data.secondSource||null;
-  flights.__dataMode=data.dataMode||mode;
-  try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights, fetchedAt:data.fetchedAt||'',secondSource:data.secondSource||null,dataMode:data.dataMode||mode}));}catch{}
-  return flights;
+
+  let liveryAssignments=data.liveryAssignments||[];
+  const tomorrow=addLocalDays(airportToday(),1);
+  if(mode==='actual' && state.special && date===tomorrow){
+    const regs=liveryRegsForFlights(flights);
+    if(regs.length){
+      const q=new URLSearchParams({
+        airport:state.airport,
+        date,
+        showCodeshare:String(state.showCodeshare),
+        mode,
+        liveryRegs:regs.join(',')
+      });
+      try{
+        const lr=await fetch('/api/flights?'+q.toString());
+        const ld=await lr.json();
+        if(lr.ok) liveryAssignments=ld.liveryAssignments||[];
+      }catch{}
+    }
+  }
+
+  const assignmentMap=new Map(liveryAssignments.map(x=>[
+    [String(x.number||'').replace(/\\s+/g,'').toUpperCase(),x.direction].join('|'),
+    x
+  ]));
+  const finalFlights=flights.map(f=>{
+    const key=[String(numberOf(f)||'').replace(/\\s+/g,'').toUpperCase(),f.__direction].join('|');
+    const a=assignmentMap.get(key);
+    const override=aircraftOverrideFor(state.airport,date,f.__direction,numberOf(f));
+    if(!a&&!override) return f;
+    const registration=override?.registration||a?.registration||f?.aircraft?.reg||f?.registration||'';
+    const model=override?.model||a?.aircraft?.model||f?.aircraft?.model;
+    return {
+      ...f,
+      aircraft:{...(f.aircraft||{}),...(a?.aircraft||{}),model,reg:registration},
+      registration,
+      __liveryAssignment:Boolean(a),
+      __liveryAssignmentSource:a?'AeroDataBox registration schedule':'',
+      ...(override?{__aircraftOverride:true,__aircraftOverrideSource:override.source}: {})
+    };
+  });
+  finalFlights.__fetchedAt=data.fetchedAt||'';
+  finalFlights.__secondSource=data.secondSource||null;
+  finalFlights.__dataMode=data.dataMode||mode;
+  try{localStorage.setItem(key,JSON.stringify({savedAt:Date.now(),flights:finalFlights, fetchedAt:data.fetchedAt||'',secondSource:data.secondSource||null,dataMode:data.dataMode||mode}));}catch{}
+  return finalFlights;
 }
 async function loadRange(force=false){
   state.loading=true; state.error=''; render();
