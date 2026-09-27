@@ -89,3 +89,11 @@
 .log-filters label{display:flex;flex-direction:column;gap:4px}
 .log-filters label span{font-size:9px;color:#9299a2}
 .log-filters select{width:100%;box-sizing:border-box;border:1px solid #e2e6ea;background:#f8f9fa;border-radius:9px;padding:7px 8px;font-size:10px;color:#4f5863}
+
+.log-actions{position:relative;display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:9px 14px 12px;border-top:1px solid #edf0f3}
+.log-settings{width:28px;height:28px;border:0;background:#f5f6f7;color:#747b84;border-radius:50%;font-size:15px;display:grid;place-items:center;padding:0}
+.log-settings-menu{display:none;position:absolute;right:14px;margin-top:-4px;z-index:5;background:#fff;border:1px solid #e3e6ea;border-radius:11px;box-shadow:0 6px 18px rgba(23,25,29,.10);padding:5px;min-width:118px}
+.log-settings-menu.open{display:flex;flex-direction:column}
+.log-settings-menu button{border:0;background:#fff;text-align:left;border-radius:7px;padding:8px 9px;font-size:10px;color:#59626d}
+.log-settings-menu button:active{background:#f3f5f7}
+.log-settings-menu button.danger{color:#b04a4a}
