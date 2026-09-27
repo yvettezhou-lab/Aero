@@ -71,3 +71,13 @@
 .log-view-all,.log-clear{border:1px solid #e3e6ea;background:#f7f8fa;border-radius:9px;padding:6px 10px;font-size:10px}
 .log-view-all{background:#f1f5fa;border-color:#dce6f1;color:#496b8f}
 .log-history-wrap{border-top:1px solid #edf0f3;padding:0 14px 10px}
+
+/* Spotting log summary header */
+.log-head{min-height:64px!important;padding:12px 14px!important}
+.log-head>div.log-title{display:flex!important;align-items:center!important;gap:9px!important;grid-template-columns:none!important}
+.log-head>div.log-title::before{content:"📒";width:34px;height:34px;display:grid;place-items:center;background:#f2f3f5;border-radius:10px;font-size:18px;flex:0 0 34px}
+.log-title b{font-size:14px!important;line-height:18px}
+.log-head>div.log-summary{margin-left:auto;display:flex!important;align-items:center;gap:8px;grid-template-columns:none!important}
+.log-summary span{font-size:10px!important;color:#9aa0a8!important;margin:0!important;white-space:nowrap}
+.log-head .log-summary .log-chevron{margin:0;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#f5f6f7;font-size:13px;color:#747b84;line-height:1;flex:0 0 28px}
+.log-head>div.log-summary::before{display:none}
