@@ -239,13 +239,18 @@ function spottingLogCard(){
   const historyHtml=filteredHistory.length
     ? '<div class="log-history">'+dates.map(date=>'<div class="log-date"><b>'+esc(date.slice(5).replace('-','/'))+'</b><span>'+filteredHistory.filter(x=>x.date===date).length+' logged</span></div>'+formatRows(filteredHistory.filter(x=>x.date===date))).join('')+'</div>'
     : '<div class="log-empty">No matching spotting records.</div>';
+  const filterPanel='<div class="log-history-wrap"><div class="log-filters">'+
+    '<label><span>Date</span><select id="logFilterDate"><option value="">All dates</option>'+dateOptions.map(d=>'<option value="'+esc(d)+'" '+(state.spottingLogFilterDate===d?'selected':'')+'>'+esc(d.slice(5).replace('-','/'))+'</option>').join('')+'</select></label>'+
+    '<label><span>Aircraft</span><select id="logFilterAircraft"><option value="">All aircraft</option>'+aircraftOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAircraft===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</select></label>'+
+    '<label><span>Airport</span><select id="logFilterAirport"><option value="">All airports</option>'+airportOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAirport===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</select></label>'+
+    '<label><span>Flight / Reg.</span><input id="logFilterSearch" placeholder="e.g. MU5811" value="'+esc(state.spottingLogFilterSearch)+'"></label>'+
+    '<label class="log-filter-check"><input id="logFilterLivery" type="checkbox" '+(state.spottingLogFilterLivery?'checked':'')+'><span>Special livery only</span></label>'+
+    '<button class="log-filter-clear '+(hasLogFilter?'active':'')+'" id="clearLogFilters">Clear filters</button></div>'+historyHtml+'</div>';
   const body=state.spottingLogOpen
     ? '<div class="log-today">'+formatRows(today)+'</div>'+
       '<div class="log-actions">'+(allHistory.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'View less':'View all')+'</button>':'')+'<button class="log-settings" id="logSettings" aria-label="Spotting log settings">⚙</button></div>'+
       '<div class="log-settings-menu" id="logSettingsMenu"><button id="exportAeroData">Export data</button><button id="importAeroData">Import data</button><button id="clearLog" class="danger">Clear all</button><input id="importAeroFile" type="file" accept=".json,application/json" hidden></div>'+
-      (state.spottingLogHistory
-        ? '<div class="log-history-wrap"><div class="log-filters"><label><span>Date</span><select id="logFilterDate"><option value="">All dates</option>'+dateOptions.map(d=>'<option value="'+esc(d)+'" '+(state.spottingLogFilterDate===d?'selected':'')+'>'+esc(d.slice(5).replace('-','/'))+'</option>').join('')+'</select></label><label><span>Aircraft</span><select id="logFilterAircraft"><option value="">All aircraft</option>'+aircraftOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAircraft===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</select></label><label><span>Airport</span><select id="logFilterAirport"><option value="">All airports</option>'+airportOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAirport===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</select></label><label><span>Flight / Reg.</span><input id="logFilterSearch" placeholder="e.g. MU5811" value="'+esc(state.spottingLogFilterSearch)+'"></label><label class="log-filter-check"><input id="logFilterLivery" type="checkbox" '+(state.spottingLogFilterLivery?'checked':'')+'><span>Special livery only</span></label><button class="log-filter-clear '+(hasLogFilter?'active':'')" id="clearLogFilters">Clear filters</button></div>'+historyHtml+'</div>'
-        : '')
+      (state.spottingLogHistory ? filterPanel : '')
     : '';
   return '<section class="log-card '+(state.spottingLogOpen?'open':'')+'"><button class="log-head" id="toggleLog" aria-expanded="'+(state.spottingLogOpen?'true':'false')+'"><div class="log-title"><b>My Spotting Log</b></div><div class="log-summary"><span>'+today.length+' logged today</span><i class="log-chevron">'+(state.spottingLogOpen?'⌃':'⌄')+'</i></div></button>'+body+'</section>';
 }
