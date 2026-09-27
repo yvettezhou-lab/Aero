@@ -31,7 +31,7 @@ function faToFlight(x,direction){
   };
 }
 export default async function handler(req,res){
-  const {airport,date,showCodeshare,mode}=req.query;
+  const {airport,date,showCodeshare,mode,liveryRegs}=req.query;
   const key=process.env.AERODATABOX_API_KEY;
   if(!key) return res.status(500).json({error:'API Key 尚未配置'});
   if(!airport||!date) return res.status(400).json({error:'缺少机场或日期'});
@@ -43,6 +43,33 @@ export default async function handler(req,res){
     }));
     let departures=parts.flatMap(x=>x.departures||[]);
     let arrivals=parts.flatMap(x=>x.arrivals||[]);
+    let liveryAssignments=[];
+    const requestedLiveryRegs=String(liveryRegs||'').split(',').map(x=>x.trim()).filter(Boolean).slice(0,40);
+    if(requestedLiveryRegs.length){
+      const results=await Promise.allSettled(requestedLiveryRegs.map(reg=>{
+        const url=BASE+'/flights/reg/'+encodeURIComponent(reg)+'/'+encodeURIComponent(date)+'?dateLocalRole=Both';
+        return fetchBox(url,key).then(items=>({reg,items:Array.isArray(items)?items:[]}));
+      }));
+      for(const result of results){
+        if(result.status!=='fulfilled') continue;
+        const {reg,items}=result.value;
+        for(const f of items){
+          const dep=f?.departure?.airport?.iata||f?.departure?.airport?.icao||'';
+          const arr=f?.arrival?.airport?.iata||f?.arrival?.airport?.icao||'';
+          if(String(dep).toUpperCase()!==String(airport).toUpperCase() && String(arr).toUpperCase()!==String(airport).toUpperCase()) continue;
+          liveryAssignments.push({
+            registration:f?.aircraft?.reg||reg,
+            number:f?.number||'',
+            direction:String(dep).toUpperCase()===String(airport).toUpperCase()?'dep':'arr',
+            aircraft:f?.aircraft||{},
+            status:f?.status||'',
+            departure:f?.departure||null,
+            arrival:f?.arrival||null,
+            airline:f?.airline||null
+          });
+        }
+      }
+    }
     let secondSource={enabled:false,ok:false};
     const faKey=process.env.FLIGHTAWARE_API_KEY;
     if(faKey){
@@ -69,6 +96,6 @@ export default async function handler(req,res){
         secondSource={enabled:true,ok:true,matched:fd2.length+fa2.length};
       }catch(e){secondSource={enabled:true,ok:false,error:e.message};}
     }
-    return res.status(200).json({departures,arrivals,source:'AeroDataBox',secondSource,dataMode:mode||'schedule',fetchedAt:new Date().toISOString()});
+    return res.status(200).json({departures,arrivals,liveryAssignments,source:'AeroDataBox',secondSource,dataMode:mode||'schedule',fetchedAt:new Date().toISOString()});
   }catch(e){return res.status(502).json({error:e.message||'服务器请求航班数据失败'});}
 }
