@@ -529,7 +529,19 @@ function openConfirm(f,date=state.date){
   document.querySelector('#timeFrom').onchange=e=>{state.timeFrom=e.target.value;render();};
   document.querySelector('#timeTo').onchange=e=>{state.timeTo=e.target.value;render();};
   document.querySelector('#wide').onclick=()=>{state.widebody=!state.widebody;render();};
-  document.querySelector('#special').onclick=()=>{state.special=!state.special;render();};
+  document.querySelector('#special').onclick=async()=>{
+    state.special=!state.special;
+    render();
+    if(state.special && flightDataMode(state.date)==='actual' && state.date===addLocalDays(airportToday(),1)){
+      state.loading=true;render();
+      try{
+        const flights=await fetchDay(state.date,true);
+        state.dayFlights[state.date]=flights;
+        state.flights=flights;
+      }catch(e){state.error=e.message||'Unable to refresh livery assignments.';}
+      finally{state.loading=false;render();}
+    }
+  };
   document.querySelector('#codeshare').onclick=()=>{state.showCodeshare=!state.showCodeshare;render();};
   document.querySelector('#airlineSelect').onchange=e=>{state.selectedAirlines=e.target.value?[e.target.value]:[];render();};
   document.querySelector('#aircraftSelect').onchange=e=>{state.aircraftTypes=e.target.value?[e.target.value]:[];render();};
