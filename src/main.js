@@ -190,7 +190,7 @@ function spottingLogCard(){
       '<div class="log-actions">'+(history.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'Hide earlier':'View all')+'</button>':'')+(state.spottingLog.length?'<button class="log-clear" id="clearLog">Clear all</button>':'')+'</div>'+
       (state.spottingLogHistory?'<div class="log-history-wrap">'+historyHtml+'</div>':'')
     : '';
-  return '<section class="log-card '+(state.spottingLogOpen?'open':'')+'"><button class="log-head" id="toggleLog" aria-expanded="'+(state.spottingLogOpen?'true':'false')+'"><div><b>📒 My Spotting Log</b><span>'+today.length+' logged today</span></div><span class="log-chevron">'+(state.spottingLogOpen?'⌃':'⌄')+'</span></button>'+body+'</section>';
+  return '<section class="log-card '+(state.spottingLogOpen?'open':'')+'"><button class="log-head" id="toggleLog" aria-expanded="'+(state.spottingLogOpen?'true':'false')+'"><div class="log-title"><b>My Spotting Log</b></div><div class="log-summary"><span>'+today.length+' logged today</span><i class="log-chevron">'+(state.spottingLogOpen?'⌃':'⌄')+'</i></div></button>'+body+'</section>';
 }
 function sourceFooter(){
   const meta=state.sourceMeta[state.date]?.secondSource;
