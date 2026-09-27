@@ -3,6 +3,78 @@
 // rarity is intentionally simple: 稀有 / 少见 / 常见.
 
 export const LIVERIES = {
+  "B-1788": {
+    name: "云南孔雀号",
+    rarity: "稀有",
+    airline: "中国东方航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-6507": {
+    name: "上海迪士尼度假区",
+    rarity: "稀有",
+    airline: "中国东方航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-5976": {
+    name: "Toy Story",
+    rarity: "稀有",
+    airline: "中国东方航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-5633": {
+    name: "SkyTeam",
+    rarity: "少见",
+    airline: "厦门航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-1115": {
+    name: "梦旅生花·中国牡丹",
+    rarity: "稀有",
+    airline: "吉祥航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-207N": {
+    name: "丝路飘带",
+    rarity: "少见",
+    airline: "吉祥航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-208A": {
+    name: "丝路飘带",
+    rarity: "少见",
+    airline: "吉祥航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-8068": {
+    name: "红动中国",
+    rarity: "少见",
+    airline: "吉祥航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-30EQ": {
+    name: "绚彩花瓣",
+    rarity: "少见",
+    airline: "吉祥航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-20D1": {
+    name: "绚彩花瓣",
+    rarity: "少见",
+    airline: "吉祥航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-20EC": {
+    name: "东方宝石",
+    rarity: "稀有",
+    airline: "吉祥航空",
+    source: "Flightradar24 aircraft record"
+  },
+  "B-226M": {
+    name: "花见神州",
+    rarity: "稀有",
+    airline: "吉祥航空",
+    source: "AirHistory / current aircraft record"
+  },
   "B-1228": {
     name: "第9999架波音737",
     rarity: "少见",
