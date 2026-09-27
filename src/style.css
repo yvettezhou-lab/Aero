@@ -97,3 +97,18 @@
 .log-settings-menu button{border:0;background:#fff;text-align:left;border-radius:7px;padding:8px 9px;font-size:10px;color:#59626d}
 .log-settings-menu button:active{background:#f3f5f7}
 .log-settings-menu button.danger{color:#b04a4a}
+
+.log-card{position:relative}
+.log-actions{position:relative}
+.log-settings{width:34px;height:34px;border:0;background:#f2f3f5;color:#5f6670;border-radius:50%;font-size:18px;display:grid;place-items:center;padding:0;line-height:1}
+.log-settings-menu{display:none;position:absolute;right:14px;bottom:52px;z-index:20;background:#fff;border:1px solid #e3e6ea;border-radius:12px;box-shadow:0 8px 24px rgba(23,25,29,.13);padding:5px;min-width:125px}
+.log-settings-menu.open{display:flex;flex-direction:column}
+.log-settings-menu button{border:0;background:#fff;text-align:left;border-radius:8px;padding:9px 10px;font-size:11px;color:#59626d}
+.log-settings-menu button:active{background:#f3f5f7}
+.log-settings-menu button.danger{color:#b04a4a}
+.log-filters{grid-template-columns:1fr 1fr}
+.log-filter-check{grid-column:1;display:flex!important;flex-direction:row!important;align-items:center;gap:6px!important;padding:5px 0}
+.log-filter-check input{width:16px;height:16px}
+.log-filter-check span{font-size:10px!important;color:#59626d!important}
+.log-filter-clear{align-self:end;border:1px solid #e1e5ea;background:#f7f8fa;color:#68717c;border-radius:9px;padding:7px 9px;font-size:10px}
+.log-filter-clear.active{background:#eef3f8;color:#496b8f;border-color:#dce6f1}
