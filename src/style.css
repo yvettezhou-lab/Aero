@@ -100,7 +100,7 @@
 
 .log-card{position:relative}
 .log-actions{position:relative}
-.log-settings{width:36px;height:36px;border:0;background:#f5f6f7;color:#666d76;border-radius:50%;font-size:19px;display:grid;place-items:center;padding:0;line-height:1;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif}
+.log-settings{width:30px;height:30px;border:0;background:transparent;color:#737a83;border-radius:0;font-size:17px;display:grid;place-items:center;padding:0;line-height:1;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif}
 .log-settings-menu{display:none;position:absolute;right:14px;bottom:52px;z-index:20;background:#fff;border:1px solid #e3e6ea;border-radius:12px;box-shadow:0 8px 24px rgba(23,25,29,.13);padding:5px;min-width:125px}
 .log-settings-menu.open{display:flex;flex-direction:column}
 .log-settings-menu button{border:0;background:#fff;text-align:left;border-radius:8px;padding:9px 10px;font-size:11px;color:#59626d}
