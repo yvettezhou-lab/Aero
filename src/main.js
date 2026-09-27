@@ -173,7 +173,7 @@ function spottingRecordButton(f){
 function markSeen(f){
   const info=aircraftDisplay(f), l=liveryOf(f), key=recordKey(f);
   if(!state.spottingLog.some(x=>x.key===key)){
-    state.spottingLog.push({key,airport:state.airport,date:state.date,number:numberOf(f),type:info.current,registration:info.registration||'',livery:l?.name||'',rarity:l?.rarity||'',savedAt:new Date().toISOString()});
+    state.spottingLog.push({key,airport:state.airport,date:state.date,time:timeOf(f),number:numberOf(f),type:info.current,registration:info.registration||'',livery:l?.name||'',rarity:l?.rarity||'',savedAt:new Date().toISOString()});
     saveSpottingLog();
   }
   state.detailFlight=null;
@@ -219,35 +219,48 @@ function aeroImportData(file){
 }
 function spottingLogCard(){
   const todayDate=localISO();
-  const today=state.spottingLog.filter(x=>x.airport===state.airport&&x.date===todayDate);
+  const today=state.spottingLog.filter(x=>x.date===todayDate);
   const allHistory=state.spottingLog.filter(x=>x.date<todayDate);
   const filteredHistory=allHistory.filter(x=>
     (!state.spottingLogFilterDate||x.date===state.spottingLogFilterDate)&&
     (!state.spottingLogFilterAirport||x.airport===state.spottingLogFilterAirport)&&
     (!state.spottingLogFilterAircraft||x.type===state.spottingLogFilterAircraft)&&
-    (!state.spottingLogFilterLivery||Boolean(x.livery)===true)&&
+    (!state.spottingLogFilterLivery||Boolean(x.livery))&&
     (!state.spottingLogFilterSearch||String(x.number||'').toLowerCase().includes(state.spottingLogFilterSearch.toLowerCase())||String(x.registration||'').toLowerCase().includes(state.spottingLogFilterSearch.toLowerCase()))
   );
   const formatRows=(rows)=>rows.length
-    ? '<div class="log-list">'+[...rows].reverse().map(x=>'<div class="log-row"><div><b>'+esc(x.number)+'</b><span>'+esc(x.airport)+' · '+esc(x.date.slice(5).replace('-','/'))+'</span></div><div><strong>'+esc(x.type)+'</strong>'+(x.registration?'<small>'+esc(x.registration)+'</small>':'')+(x.livery?'<em>🎨 '+esc(x.livery)+' · '+esc(x.rarity||'Uncommon')+'</em>':'')+'</div></div>').join('')+'</div>'
+    ? '<div class="log-list">'+[...rows].sort((a,b)=>String(a.time||'').localeCompare(String(b.time||''))).map(x=>'<div class="log-row"><div><b>'+esc(x.number)+'</b><span>'+esc(x.time||'—')+'</span></div><div><strong>'+esc(x.type||'Aircraft unknown')+'</strong>'+(x.registration?'<small>'+esc(x.registration)+'</small>':'')+(x.livery?'<button class="log-livery" type="button" data-livery="'+esc(x.livery)+'" aria-label="Show livery name">🎨</button><span class="log-livery-name" hidden>'+esc(x.livery)+(x.rarity?' · '+esc(x.rarity):'')+'</span>':'')+'</div></div>').join('')+'</div>'
     : '<div class="log-empty">No matching spotting records.</div>';
-  const dates=[...new Set(filteredHistory.map(x=>x.date))].sort((a,b)=>b.localeCompare(a));
+  const groupSections=(rows)=>{
+    const dates=[...new Set(rows.map(x=>x.date))].sort((a,b)=>b.localeCompare(a));
+    return dates.map(date=>{
+      const day=rows.filter(x=>x.date===date);
+      const airports=[...new Set(day.map(x=>x.airport||'—'))].sort();
+      return airports.map(airport=>{
+        const group=day.filter(x=>(x.airport||'—')===airport);
+        return '<div class="log-date"><b>'+esc(date.slice(5).replace('-','/'))+' · '+esc(airport)+'</b><span>'+group.length+' logged</span></div>'+formatRows(group);
+      }).join('');
+    }).join('');
+  };
   const dateOptions=[...new Set(allHistory.map(x=>x.date))].sort((a,b)=>b.localeCompare(a));
   const airportOptions=[...new Set(allHistory.map(x=>x.airport))].sort();
   const aircraftOptions=[...new Set(allHistory.map(x=>x.type).filter(Boolean))].sort();
   const hasLogFilter=Boolean(state.spottingLogFilterDate||state.spottingLogFilterAirport||state.spottingLogFilterAircraft||state.spottingLogFilterLivery||state.spottingLogFilterSearch);
   const historyHtml=filteredHistory.length
-    ? '<div class="log-history">'+dates.map(date=>'<div class="log-date"><b>'+esc(date.slice(5).replace('-','/'))+'</b><span>'+filteredHistory.filter(x=>x.date===date).length+' logged</span></div>'+formatRows(filteredHistory.filter(x=>x.date===date))).join('')+'</div>'
+    ? '<div class="log-history">'+groupSections(filteredHistory)+'</div>'
     : '<div class="log-empty">No matching spotting records.</div>';
+  const todayHtml=today.length
+    ? '<div class="log-history log-today">'+groupSections(today)+'</div>'
+    : '<div class="log-empty">No flights logged today.</div>';
   const filterPanel='<div class="log-history-wrap"><div class="log-filters">'+
     '<label><span>Date</span><select id="logFilterDate"><option value="">All dates</option>'+dateOptions.map(d=>'<option value="'+esc(d)+'" '+(state.spottingLogFilterDate===d?'selected':'')+'>'+esc(d.slice(5).replace('-','/'))+'</option>').join('')+'</select></label>'+
     '<label><span>Aircraft</span><select id="logFilterAircraft"><option value="">All aircraft</option>'+aircraftOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAircraft===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</select></label>'+
-    '<label><span>Airport</span><select id="logFilterAirport"><option value="">All airports</option>'+airportOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAirport===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</select></label>'+
+    '<label><span>Airport</span><select id="logFilterAirport"><option value="">All airports</option>'+airportOptions.map(a=>'<option value="'+esc(a)+'" '+(state.spottingLogFilterAirport===a?'selected':'')+'>'+esc(a)+'</option>').join('')+'</label>'+
     '<label><span>Flight / Reg.</span><input id="logFilterSearch" placeholder="e.g. MU5811" value="'+esc(state.spottingLogFilterSearch)+'"></label>'+
     '<label class="log-filter-check"><input id="logFilterLivery" type="checkbox" '+(state.spottingLogFilterLivery?'checked':'')+'><span>Special livery only</span></label>'+
     '<button class="log-filter-clear '+(hasLogFilter?'active':'')+'" id="clearLogFilters">Clear filters</button></div>'+historyHtml+'</div>';
   const body=state.spottingLogOpen
-    ? '<div class="log-today">'+formatRows(today)+'</div>'+
+    ? todayHtml+
       '<div class="log-actions">'+(allHistory.length?'<button class="log-view-all" id="viewAllLog">'+(state.spottingLogHistory?'View less':'View all')+'</button>':'')+'<button class="log-settings" id="logSettings" aria-label="Spotting log settings">⚙︎</button></div>'+
       '<div class="log-settings-menu" id="logSettingsMenu"><button id="exportAeroData">Export data</button><button id="importAeroData">Import data</button><button id="clearLog" class="danger">Clear all</button><input id="importAeroFile" type="file" accept=".json,application/json" hidden></div>'+
       (state.spottingLogHistory ? filterPanel : '')
@@ -500,6 +513,7 @@ function openConfirm(f,date=state.date){
   document.querySelector('#logFilterLivery')?.addEventListener('change',e=>{state.spottingLogFilterLivery=e.target.checked?'1':'';localStorage.setItem('aero-spotting-log-filter-livery',state.spottingLogFilterLivery);render();});
   document.querySelector('#logFilterSearch')?.addEventListener('input',e=>{state.spottingLogFilterSearch=e.target.value;localStorage.setItem('aero-spotting-log-filter-search',state.spottingLogFilterSearch);render();});
   document.querySelector('#clearLogFilters')?.addEventListener('click',()=>{state.spottingLogFilterDate='';state.spottingLogFilterAirport='';state.spottingLogFilterAircraft='';state.spottingLogFilterLivery='';state.spottingLogFilterSearch='';['date','airport','aircraft','livery','search'].forEach(k=>localStorage.removeItem('aero-spotting-log-filter-'+k));render();});
+  document.querySelectorAll('.log-livery').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();const name=btn.nextElementSibling;if(name){name.hidden=!name.hidden;}}));
   document.querySelector('#logSettings')?.addEventListener('click',e=>{e.stopPropagation();document.querySelector('#logSettingsMenu')?.classList.toggle('open');});
   document.querySelector('#logSettingsMenu')?.addEventListener('click',e=>e.stopPropagation());
   if(!window.__aeroLogMenuHandler){window.__aeroLogMenuHandler=true;document.addEventListener('pointerdown',e=>{const menu=document.querySelector('#logSettingsMenu'),gear=document.querySelector('#logSettings');if(menu?.classList.contains('open')&&!menu.contains(e.target)&&!gear?.contains(e.target)){menu.classList.remove('open');e.stopPropagation();}},true);}
